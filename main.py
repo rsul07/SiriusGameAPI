@@ -1,11 +1,9 @@
-import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from utils.migrate import create_tables, delete_tables
 from events.router import router as events_router
-
-ENV = os.getenv("ENV", "dev")
+from config import ENV
 
 if ENV == "dev":
     @asynccontextmanager
@@ -15,7 +13,6 @@ if ENV == "dev":
 else:
     @asynccontextmanager
     async def lifespan(app: FastAPI):
-        await delete_tables()
         await create_tables()
         yield
 
