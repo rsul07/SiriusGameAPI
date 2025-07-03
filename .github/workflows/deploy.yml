@@ -33,7 +33,8 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_KEY }}
+          port: 8922
           script: |
-            cd ~/siriusgame
+            cd ~/SiriusGame
             docker compose pull api
             docker compose up -d api
