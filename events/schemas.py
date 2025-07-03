@@ -2,7 +2,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Optional, Dict, Any
 
-from pydantic import BaseModel, Field, validator, field_validator, computed_field
+from pydantic import BaseModel, Field, validator, computed_field
 
 class TypeEnum(str, Enum):
     individual = "individual"
@@ -19,12 +19,6 @@ class _EventBase(BaseModel):
     def strip_name(cls, v: str) -> str:
         return v.strip()
 
-    @field_validator('date', mode='before')
-    def parse_ddmmyyyy(cls, v):
-        if isinstance(v, str):
-            return datetime.strptime(v, "%d.%m.%Y")
-        return v
-
 class SEventAdd(_EventBase):
     pass
 
@@ -35,12 +29,24 @@ class SEventUpdate(BaseModel):
     type: Optional[TypeEnum] = None
     rules: Optional[Dict[str, Any]] = None
 
-class SEvent(SEventAdd):
+class SEventId(BaseModel):
+    ok: bool = True
+    event_id: int
+
+class SEventImage(BaseModel):
     id: int
+    url: str
+
+class SEventImageAdd(BaseModel):
+    url: str
+
+class SEvent(_EventBase):
+    id: int
+    images: list[SEventImage] = []
 
     model_config = {"from_attributes": True}
 
-    @computed_field
+    @computed_field(return_type=str)
     def state(self) -> str:
         now = datetime.utcnow()
         if self.date.date() < now.date():
@@ -48,7 +54,3 @@ class SEvent(SEventAdd):
         if self.date > now:
             return "future"
         return "current"
-
-class SEventId(BaseModel):
-    ok: bool = True
-    event_id: int
