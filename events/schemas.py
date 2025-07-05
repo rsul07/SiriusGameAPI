@@ -1,56 +1,84 @@
-from datetime import datetime
-from enum import Enum
-from typing import Optional, Dict, Any
+import datetime as dt
+from typing import Literal, Optional
 
-from pydantic import BaseModel, Field, validator, computed_field
+from pydantic import BaseModel, Field, field_validator, computed_field, model_validator
+from db.events import MediaEnum
 
-class TypeEnum(str, Enum):
-    individual = "individual"
-    team = "team"
+class _EventMedia(BaseModel):
+    url: str
+    media_type: MediaEnum = MediaEnum.image
+    name: Optional[str]
+    order: int = 0  # used by image slider
 
-class _EventBase(BaseModel):
-    name: str = Field(..., max_length=120)
+class SEventMediaAdd(_EventMedia):
+    pass
+
+class SEventMedia(_EventMedia):
+    id: int
+    event_id: int
+
+    model_config = {"from_attributes": True}
+
+class EventExtrasMixin(BaseModel):
     description: Optional[str] = None
-    date: datetime
-    type: TypeEnum
-    rules: Optional[Dict[str, Any]] = None
+    start_time: Optional[dt.time] = None
+    end_time: Optional[dt.time] = None
+    max_members: Optional[int] = None
+    max_teams: Optional[int] = None
 
-    @validator("name", pre=True)
-    def strip_name(cls, v: str) -> str:
+    @model_validator(mode="after")
+    def validate_limits(self):
+        if not hasattr(self, "is_team"):
+            return self
+        if self.is_team is True and self.max_teams is None:
+            raise ValueError("max_teams required when is_team=True")
+        if self.is_team is False and self.max_members is None:
+            raise ValueError("max_members required when is_team=False")
+        return self
+
+class _EventBase(EventExtrasMixin):
+    title: str = Field(..., max_length=120)
+    date: dt.date
+    is_team: bool
+    
+    @field_validator("title", mode="before")
+    def strip_title(cls, v: str) -> str:
         return v.strip()
 
 class SEventAdd(_EventBase):
     pass
 
-class SEventUpdate(BaseModel):
-    name: Optional[str] = Field(None, max_length=120)
-    description: Optional[str] = None
-    date: Optional[datetime] = None
-    type: Optional[TypeEnum] = None
-    rules: Optional[Dict[str, Any]] = None
+class SEventUpdate(EventExtrasMixin):
+    title: Optional[str] = Field(None, max_length=120)
+    date: Optional[dt.date] = None
+    is_team: Optional[bool] = None
 
 class SEventId(BaseModel):
     ok: bool = True
     event_id: int
 
-class SEventImage(BaseModel):
-    id: int
-    url: str
-
-class SEventImageAdd(BaseModel):
-    url: str
-
 class SEvent(_EventBase):
     id: int
-    images: list[SEventImage] = []
+    media: list[SEventMedia]
 
     model_config = {"from_attributes": True}
 
-    @computed_field(return_type=str)
+    @computed_field(return_type=Literal["future", "current", "past"])
     def state(self) -> str:
-        now = datetime.utcnow()
-        if self.date.date() < now.date():
-            return "past"
-        if self.date > now:
+        now = dt.datetime.now(dt.timezone.utc)  # aware-datetime
+
+        start_dt = (
+            dt.datetime.combine(self.date, self.start_time, tzinfo=dt.timezone.utc) if self.start_time 
+            else dt.datetime.combine(self.date, dt.time.min, tzinfo=dt.timezone.utc)
+        )
+
+        end_dt = (
+            dt.datetime.combine(self.date, self.end_time, tzinfo=dt.timezone.utc) if self.end_time
+            else dt.datetime.combine(self.date, dt.time.max, tzinfo=dt.timezone.utc)
+        )
+
+        if start_dt <= now <= end_dt:
+            return "current"
+        if now < start_dt:
             return "future"
-        return "current"
+        return "past"
