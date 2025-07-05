@@ -1,18 +1,17 @@
 from typing import List, Optional
 
-from sqlalchemy import select, delete, update
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, delete, update, exists
 from sqlalchemy.orm import selectinload
 
 from db import new_session
-from db.events import EventOrm, EventImageOrm
-from events.schemas import SEventAdd, SEvent, SEventUpdate, SEventImageAdd
+from db.events import EventOrm, EventMediaOrm
+from events.schemas import SEventAdd, SEvent, SEventUpdate, SEventMediaAdd
 
 class EventRepository:
     @classmethod
     async def get_all(cls) -> List[SEvent]:
         async with new_session() as session:
-            res = await session.execute(select(EventOrm).options(selectinload(EventOrm.images)))
+            res = await session.execute(select(EventOrm).options(selectinload(EventOrm.media)))
             events = res.scalars().all()
             return [SEvent.model_validate(e, from_attributes=True) for e in events]
 
@@ -58,20 +57,25 @@ class EventRepository:
             return bool(res.rowcount)
 
     @classmethod
-    async def add_image(cls, event_id: int, data: SEventImageAdd) -> Optional[int]:
+    async def add_media(cls, event_id: int, data: SEventMediaAdd) -> Optional[int]:
         async with new_session() as session:
-            event = await session.get(EventOrm, event_id)
-            if not event:
+            event_exists = await session.scalar(select(exists().where(EventOrm.id == event_id)))
+            if not event_exists:
                 return None
-            image = EventImageOrm(event_id=event_id, **data.model_dump())
-            session.add(image)
+
+            media = EventMediaOrm(event_id=event_id, **data.model_dump())
+            session.add(media)
             await session.commit()
-            await session.refresh(image)
-            return image.id
+            await session.refresh(media)
+            return media.id
 
     @classmethod
-    async def delete_image(cls, event_id: int, image_id: int) -> bool:
+    async def delete_media(cls, event_id: int, media_id: int) -> bool:
         async with new_session() as session:
-            res = await session.execute(delete(EventImageOrm).where(EventImageOrm.id == image_id))
+            stmt = delete(EventMediaOrm).where(
+                EventMediaOrm.event_id == event_id, 
+                EventMediaOrm.id == media_id
+            )
+            res = await session.execute(stmt)
             await session.commit()
             return bool(res.rowcount)

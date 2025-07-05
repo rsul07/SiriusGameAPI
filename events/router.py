@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from events.repository import EventRepository
-from events.schemas import SEventAdd, SEvent, SEventId, SEventUpdate, SEventImageAdd
+from events.schemas import SEventAdd, SEvent, SEventId, SEventUpdate, SEventMediaAdd
 
 router = APIRouter(prefix="/events", tags=["events"])
 
@@ -27,16 +27,16 @@ async def delete_event(event_id: int):
         raise HTTPException(status_code=404, detail="Event not found")
     return {"ok": True}
 
-@router.post("/{event_id}/image", response_model=dict)
-async def add_event_image(event_id: int, body: SEventImageAdd):
-    iid = await EventRepository.add_image(event_id, body)
+@router.post("/{event_id}/media", response_model=dict)
+async def add_event_media(event_id: int, body: SEventMediaAdd):
+    iid = await EventRepository.add_media(event_id, body)
     if iid is None:
         raise HTTPException(404, "Event not found")
-    return {"ok": True, "image_id": iid}
+    return {"ok": True, "media_id": iid}
 
-@router.delete("/{event_id}/image/{image_id}", response_model=dict)
-async def delete_event_image(event_id: int, image_id: int):
-    deleted = await EventRepository.delete_image(event_id, image_id)
+@router.delete("/{event_id}/media/{media_id}", response_model=dict)
+async def delete_event_media(event_id: int, media_id: int):
+    deleted = await EventRepository.delete_media(event_id, media_id)
     if not deleted:
-        raise HTTPException(status_code=404, detail="Image not found")
+        raise HTTPException(status_code=404, detail="media not found")
     return {"ok": True}
