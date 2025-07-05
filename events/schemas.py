@@ -1,14 +1,15 @@
 import datetime as dt
-from typing import Literal, Optional
+from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator, computed_field, model_validator
 from db.events import MediaEnum
 
+# Media
 class _EventMedia(BaseModel):
     url: str
     media_type: MediaEnum = MediaEnum.image
-    name: Optional[str]
-    order: int = 0  # used by image slider
+    name: str | None = None
+    order: int = 0                     # used by image slider
 
 class SEventMediaAdd(_EventMedia):
     pass
@@ -19,18 +20,20 @@ class SEventMedia(_EventMedia):
 
     model_config = {"from_attributes": True}
 
+# Events
 class EventExtrasMixin(BaseModel):
-    description: Optional[str] = None
-    start_time: Optional[dt.time] = None
-    end_time: Optional[dt.time] = None
-    max_members: Optional[int] = None
-    max_teams: Optional[int] = None
+    description: str | None = None
+    start_time: dt.time | None = None
+    end_time: dt.time | None = None
+    max_members: int | None = None
+    max_teams: int | None = None
 
     @model_validator(mode="after")
     def validate_limits(self):
+        # skip if is_team is not set when updating event
         if not hasattr(self, "is_team"):
             return self
-        if self.is_team is True and self.max_teams is None:
+        if self.is_team and self.max_teams is None:
             raise ValueError("max_teams required when is_team=True")
         if self.is_team is False and self.max_members is None:
             raise ValueError("max_members required when is_team=False")
@@ -40,23 +43,25 @@ class _EventBase(EventExtrasMixin):
     title: str = Field(..., max_length=120)
     date: dt.date
     is_team: bool
-    
+
     @field_validator("title", mode="before")
     def strip_title(cls, v: str) -> str:
         return v.strip()
 
+# CRUD event schemas
 class SEventAdd(_EventBase):
     pass
 
 class SEventUpdate(EventExtrasMixin):
-    title: Optional[str] = Field(None, max_length=120)
-    date: Optional[dt.date] = None
-    is_team: Optional[bool] = None
+    title: str | None = Field(None, max_length=120)
+    date: dt.date | None = None
+    is_team: bool | None = None
 
 class SEventId(BaseModel):
     ok: bool = True
     event_id: int
 
+# Event
 class SEvent(_EventBase):
     id: int
     media: list[SEventMedia]
