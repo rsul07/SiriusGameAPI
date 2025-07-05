@@ -28,6 +28,14 @@ class EventRepository:
     @classmethod
     async def edit(cls, event_id: int, payload: SEventUpdate) -> bool:
         update_data = payload.model_dump(exclude_unset=True, exclude_none=True)
+
+        # prevent setting both max_members and max_teams
+        if "is_team" in update_data:
+            if update_data["is_team"]:
+                update_data["max_members"] = None
+            else:
+                update_data["max_teams"] = None
+         
         if not update_data:
             return False
 

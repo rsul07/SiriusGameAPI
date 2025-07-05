@@ -30,13 +30,14 @@ class EventExtrasMixin(BaseModel):
 
     @model_validator(mode="after")
     def validate_limits(self):
-        # skip if is_team is not set when updating event
-        if not hasattr(self, "is_team"):
-            return self
-        if self.is_team and self.max_teams is None:
+        if self.max_members is not None and self.max_teams is not None:
+            raise ValueError("Cannot set both max_members and max_teams")
+        
+        if self.is_team is True and self.max_teams is None:
             raise ValueError("max_teams required when is_team=True")
         if self.is_team is False and self.max_members is None:
             raise ValueError("max_members required when is_team=False")
+        
         return self
 
 class _EventBase(EventExtrasMixin):
