@@ -4,15 +4,23 @@ from sqlalchemy import select, delete, update, exists
 from sqlalchemy.orm import selectinload
 
 from db import new_session
-from db.events import EventOrm, EventMediaOrm
-from events.schemas import SEventAdd, SEvent, SEventUpdate, SEventMediaAdd
+from db.events import EventOrm, EventMediaOrm, EventActivityOrm
+from events.schemas import SEventAdd, SEvent, SEventUpdate, SEventMediaAdd, SEventActivityAdd
+
 
 class EventRepository:
     @classmethod
     async def get_all(cls) -> List[SEvent]:
         async with new_session() as session:
-            res = await session.execute(select(EventOrm).options(selectinload(EventOrm.media)))
-            events = res.scalars().all()
+            query = (
+                select(EventOrm)
+                .options(
+                    selectinload(EventOrm.media),
+                    selectinload(EventOrm.activities)
+                )
+            )
+            res = await session.execute(query)
+            events = res.scalars().unique().all()
             return [SEvent.model_validate(e, from_attributes=True) for e in events]
 
     @classmethod
@@ -34,7 +42,7 @@ class EventRepository:
                 update_data["max_members"] = None
             else:
                 update_data["max_teams"] = None
-         
+
         if not update_data:
             return False
 
@@ -57,6 +65,19 @@ class EventRepository:
             return bool(res.rowcount)
 
     @classmethod
+    async def add_activity(cls, event_id: int, data: SEventActivityAdd) -> Optional[int]:
+        async with new_session() as session:
+            event_exists = await session.scalar(select(exists().where(EventOrm.id == event_id)))
+            if not event_exists:
+                return None
+
+            activity = EventActivityOrm(event_id=event_id, **data.model_dump())
+            session.add(activity)
+            await session.commit()
+            await session.refresh(activity)
+            return activity.id
+
+    @classmethod
     async def add_media(cls, event_id: int, data: SEventMediaAdd) -> Optional[int]:
         async with new_session() as session:
             event_exists = await session.scalar(select(exists().where(EventOrm.id == event_id)))
@@ -73,8 +94,19 @@ class EventRepository:
     async def delete_media(cls, event_id: int, media_id: int) -> bool:
         async with new_session() as session:
             stmt = delete(EventMediaOrm).where(
-                EventMediaOrm.event_id == event_id, 
+                EventMediaOrm.event_id == event_id,
                 EventMediaOrm.id == media_id
+            )
+            res = await session.execute(stmt)
+            await session.commit()
+            return bool(res.rowcount)
+
+    @classmethod
+    async def delete_activity(cls, event_id: int, activity_id: int) -> bool:
+        async with new_session() as session:
+            stmt = delete(EventActivityOrm).where(
+                EventMediaOrm.event_id == event_id,
+                EventMediaOrm.id == activity_id
             )
             res = await session.execute(stmt)
             await session.commit()
