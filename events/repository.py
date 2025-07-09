@@ -4,9 +4,10 @@ from sqlalchemy import func, select, delete, update, exists
 from sqlalchemy.orm import selectinload
 
 from db import new_session
-from db.events import EventOrm, EventMediaOrm
-from .schemas import SEventAdd, SEvent, SEventUpdate, SEventMediaAdd, SMediaReorderItem
+from db.events import EventOrm, EventMediaOrm, EventActivityOrm
+from .schemas import SEventAdd, SEvent, SEventUpdate, SEventMediaAdd, SEventActivityAdd, SMediaReorderItem
 from helpers.validators import validate_limits
+
 
 class EventRepository:
     @classmethod
@@ -15,7 +16,7 @@ class EventRepository:
             res = await session.execute(select(EventOrm).options(selectinload(EventOrm.media)))
             events = res.scalars().all()
             cards = []
-            
+
             for e in events:
 
                 # preview_url: media_type==image, order==0
@@ -32,9 +33,7 @@ class EventRepository:
                     "preview_url": preview_url,
                     "is_team": e.is_team,
                 })
-            if not cards:
-                from fastapi import HTTPException
-                raise HTTPException(404, "No events found")
+
             return cards
 
     @classmethod
@@ -47,7 +46,7 @@ class EventRepository:
             if not event:
                 return None
             return SEvent.model_validate(event, from_attributes=True)
-        
+
     @classmethod
     async def add_one(cls, data: SEventAdd) -> int:
         async with new_session() as session:
@@ -63,16 +62,16 @@ class EventRepository:
 
         if not update_data:
             return False
-        
+
         async with new_session() as session:
             event = await session.get(EventOrm, event_id)
             if not event:
                 return False
-            
+
             # Null out max_teams if is_team is False
             if event.is_team == True and payload.is_team == False:
                 update_data["max_teams"] = None
-            
+
             # Validate max_teams
             max_members = payload.max_members if payload.max_members is not None else event.max_members
             max_teams = payload.max_teams if payload.max_teams is not None else event.max_teams
@@ -98,6 +97,19 @@ class EventRepository:
             return bool(res.rowcount)
 
     @classmethod
+    async def add_activity(cls, event_id: int, data: SEventActivityAdd) -> Optional[int]:
+        async with new_session() as session:
+            event_exists = await session.scalar(select(exists().where(EventOrm.id == event_id)))
+            if not event_exists:
+                return None
+
+            activity = EventActivityOrm(event_id=event_id, **data.model_dump())
+            session.add(activity)
+            await session.commit()
+            await session.refresh(activity)
+            return activity.id
+
+    @classmethod
     async def add_media(cls, event_id: int, data: SEventMediaAdd) -> Optional[int]:
         async with new_session() as session:
             event_exists = await session.scalar(select(exists().where(EventOrm.id == event_id)))
@@ -114,20 +126,31 @@ class EventRepository:
     async def delete_media(cls, event_id: int, media_id: int) -> bool:
         async with new_session() as session:
             stmt = delete(EventMediaOrm).where(
-                EventMediaOrm.event_id == event_id, 
+                EventMediaOrm.event_id == event_id,
                 EventMediaOrm.id == media_id
             )
             res = await session.execute(stmt)
             await session.commit()
             return bool(res.rowcount)
-        
+
+    @classmethod
+    async def delete_activity(cls, event_id: int, activity_id: int) -> bool:
+        async with new_session() as session:
+            stmt = delete(EventActivityOrm).where(
+                EventMediaOrm.event_id == event_id,
+                EventMediaOrm.id == activity_id
+            )
+            res = await session.execute(stmt)
+            await session.commit()
+            return bool(res.rowcount)
+
     @classmethod
     async def reorder_media(cls, event_id: int, items: list[SMediaReorderItem]) -> bool:
         if not items:
             return False
 
-        ids      = {i.id for i in items}
-        new_map  = {i.id: i.order for i in items}
+        ids = {i.id for i in items}
+        new_map = {i.id: i.order for i in items}
 
         async with new_session() as s:
             rows = await s.execute(

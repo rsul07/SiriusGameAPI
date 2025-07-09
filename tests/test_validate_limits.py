@@ -1,14 +1,16 @@
 import pytest
 from helpers.validators import validate_limits
 
+
 # Корректные случаи
 @pytest.mark.parametrize("is_team,max_members,max_teams", [
     (False, 10, None),
-    (True, 12, 3),   # 12 делится на 3
-    (True, 6, 2),    # 6 делится на 2
+    (True, 12, 3),  # 12 делится на 3
+    (True, 6, 2),  # 6 делится на 2
 ])
 def test_validate_limits_ok(is_team, max_members, max_teams):
     validate_limits(is_team, max_members, max_teams)
+
 
 # Некорректные случаи
 @pytest.mark.parametrize("is_team,max_members,max_teams,err", [
