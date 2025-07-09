@@ -18,6 +18,23 @@ class EventOrm(Model):
     max_members: Mapped[int] = mapped_column(nullable=False)
     max_teams: Mapped[int | None] = mapped_column()
 
+    @property
+    def state(self) -> str:
+        now = datetime.datetime.now(datetime.timezone.utc)
+        start_dt = (
+            datetime.datetime.combine(self.date, self.start_time or datetime.time.min,
+            tzinfo=datetime.timezone.utc)
+        )
+        end_dt = (
+            datetime.datetime.combine(self.date, self.end_time or datetime.time.max,
+            tzinfo=datetime.timezone.utc)
+        )
+        if start_dt <= now <= end_dt:
+            return "current"
+        elif now < start_dt:
+            return "future"
+        return "past"
+    
     media: Mapped[list["EventMediaOrm"]] = relationship(
         backref="event",
         cascade="all, delete-orphan",

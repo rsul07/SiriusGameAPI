@@ -3,6 +3,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator, computed_field, model_validator
 from db.events import MediaEnum
+from helpers.validators import validate_limits
 
 # Media
 class _EventMedia(BaseModel):
@@ -39,12 +40,16 @@ class _EventBase(EventExtrasMixin):
 
 # CRUD event schemas
 class SEventAdd(_EventBase):
-    pass
+    @model_validator(mode="after")
+    def validate_limits_add(self):
+        validate_limits(self.is_team, self.max_members, self.max_teams)
+        return self
 
 class SEventUpdate(EventExtrasMixin):
     title: str | None = Field(None, max_length=120)
     date: dt.date | None = None
     is_team: bool | None = None
+    max_members: int | None = None
 
 class SEventId(BaseModel):
     ok: bool = True
@@ -63,25 +68,6 @@ class SEventCard(BaseModel):
 class SEvent(_EventBase):
     id: int
     media: list[SEventMedia]
+    state: Literal["future", "current", "past"]
 
     model_config = {"from_attributes": True}
-
-    @computed_field(return_type=Literal["future", "current", "past"])
-    def state(self) -> str:
-        now = dt.datetime.now(dt.timezone.utc)  # aware-datetime
-
-        start_dt = (
-            dt.datetime.combine(self.date, self.start_time, tzinfo=dt.timezone.utc) if self.start_time 
-            else dt.datetime.combine(self.date, dt.time.min, tzinfo=dt.timezone.utc)
-        )
-
-        end_dt = (
-            dt.datetime.combine(self.date, self.end_time, tzinfo=dt.timezone.utc) if self.end_time
-            else dt.datetime.combine(self.date, dt.time.max, tzinfo=dt.timezone.utc)
-        )
-
-        if start_dt <= now <= end_dt:
-            return "current"
-        if now < start_dt:
-            return "future"
-        return "past"
