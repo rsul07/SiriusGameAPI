@@ -1,11 +1,11 @@
 from typing import List, Optional
 
-from sqlalchemy import select, delete, update, exists
+from sqlalchemy import func, select, delete, update, exists
 from sqlalchemy.orm import selectinload
 
 from db import new_session
 from db.events import EventOrm, EventMediaOrm
-from .schemas import SEventAdd, SEvent, SEventUpdate, SEventMediaAdd
+from .schemas import SEventAdd, SEvent, SEventUpdate, SEventMediaAdd, SMediaReorderItem
 from helpers.validators import validate_limits
 
 class EventRepository:
@@ -120,3 +120,30 @@ class EventRepository:
             res = await session.execute(stmt)
             await session.commit()
             return bool(res.rowcount)
+        
+    @classmethod
+    async def reorder_media(cls, event_id: int, items: list[SMediaReorderItem]) -> bool:
+        if not items:
+            return False
+
+        ids      = {i.id for i in items}
+        new_map  = {i.id: i.order for i in items}
+
+        async with new_session() as s:
+            rows = await s.execute(
+                select(func.count()).select_from(EventMediaOrm).where(
+                    EventMediaOrm.id.in_(ids),
+                    EventMediaOrm.event_id == event_id
+                )
+            )
+            if rows.scalar_one() != len(ids):
+                raise ValueError("media ids mismatch event")
+
+            for mid, new_ord in new_map.items():
+                await s.execute(
+                    update(EventMediaOrm)
+                    .where(EventMediaOrm.id == mid)
+                    .values(order=new_ord)
+                )
+            await s.commit()
+            return True

@@ -21,6 +21,10 @@ class SEventMedia(_EventMedia):
 
     model_config = {"from_attributes": True}
 
+class SMediaReorderItem(BaseModel):
+    id: int
+    order: int = Field(..., ge=0)  # order must be non-negative
+
 # Events
 class EventExtrasMixin(BaseModel):
     description: str | None = None

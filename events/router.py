@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from .repository import EventRepository
-from .schemas import SEventAdd, SEvent, SEventId, SEventUpdate, SEventMediaAdd, SEventCard
+from .schemas import SEventAdd, SEvent, SEventId, SEventUpdate, SEventMediaAdd, SEventCard, SMediaReorderItem
 
 router = APIRouter(prefix="/events", tags=["events"])
 
@@ -46,4 +46,14 @@ async def delete_event_media(event_id: int, media_id: int):
     deleted = await EventRepository.delete_media(event_id, media_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="media not found")
+    return {"ok": True}
+
+@router.patch("/{event_id}/media/reorder", response_model=dict)
+async def reorder_media(event_id: int, body: list[SMediaReorderItem]):
+    try:
+        ok = await EventRepository.reorder_media(event_id, body)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    if not ok:
+        raise HTTPException(404, "Event not found or empty body")
     return {"ok": True}
