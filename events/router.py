@@ -1,14 +1,21 @@
 from fastapi import APIRouter, HTTPException
-from events.repository import EventRepository
-from events.schemas import SEventAdd, SEvent, SEventId, SEventUpdate, SEventMediaAdd, SEventActivityAdd
+from repository import EventRepository
+from schemas import SEventAdd, SEvent, SEventId, SEventUpdate, SEventMediaAdd, SEventCard, SMediaReorderItem, SEventActivityAdd
 
 router = APIRouter(prefix="/events", tags=["events"])
 
 
-@router.get("", response_model=list[SEvent])
+@router.get("", response_model=list[SEventCard])
 async def get_events():
     return await EventRepository.get_all()
 
+
+@router.get("/{event_id}", response_model=SEvent)
+async def get_event(event_id: int):
+    event = await EventRepository.get_by_id(event_id)
+    if not event:
+        raise HTTPException(404, "Event not found")
+    return event
 
 @router.post("", response_model=SEventId)
 async def add_event(event: SEventAdd):
@@ -61,4 +68,15 @@ async def delete_event_activity(event_id: int, activity_id: int):
     deleted = await EventRepository.delete_activity(event_id, activity_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="activity not found")
+    return {"ok": True}
+
+
+@router.patch("/{event_id}/media/reorder", response_model=dict)
+async def reorder_media(event_id: int, body: list[SMediaReorderItem]):
+    try:
+        ok = await EventRepository.reorder_media(event_id, body)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    if not ok:
+        raise HTTPException(404, "Event not found or empty body")
     return {"ok": True}
