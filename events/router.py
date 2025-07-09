@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
-from repository import EventRepository
-from schemas import SEventAdd, SEvent, SEventId, SEventUpdate, SEventMediaAdd, SEventCard, SMediaReorderItem, \
+from .repository import EventRepository
+from .schemas import SEventAdd, SEvent, SEventId, SEventUpdate, SEventMediaAdd, SEventCard, SMediaReorderItem, \
     SEventActivityAdd
 
 router = APIRouter(prefix="/events", tags=["events"])

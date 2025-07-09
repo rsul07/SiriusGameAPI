@@ -5,7 +5,7 @@ from sqlalchemy.orm import selectinload
 
 from db import new_session
 from db.events import EventOrm, EventMediaOrm, EventActivityOrm
-from schemas import SEventAdd, SEvent, SEventUpdate, SEventMediaAdd, SEventActivityAdd, SMediaReorderItem
+from .schemas import SEventAdd, SEvent, SEventUpdate, SEventMediaAdd, SEventActivityAdd, SMediaReorderItem
 from helpers.validators import validate_limits
 
 

@@ -1,7 +1,8 @@
 import datetime as dt
 from typing import Literal, List
 
-from pydantic import BaseModel, Field, field_validator, computed_field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
+
 from db.events import MediaEnum
 from helpers.validators import validate_limits
 

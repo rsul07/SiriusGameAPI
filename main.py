@@ -1,10 +1,11 @@
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from utils.migrate import create_tables, delete_tables
-from events.router import router as events_router
 from config import ENV
+from events.router import router as events_router
+from utils.migrate import create_tables
 
 if ENV == "dev":
     @asynccontextmanager
