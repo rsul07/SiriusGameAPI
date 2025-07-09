@@ -1,3 +1,4 @@
+import datetime
 from typing import List, Optional
 
 from sqlalchemy import select, delete, update, exists
@@ -13,8 +14,48 @@ class EventRepository:
         async with new_session() as session:
             res = await session.execute(select(EventOrm).options(selectinload(EventOrm.media)))
             events = res.scalars().all()
-            return [SEvent.model_validate(e, from_attributes=True) for e in events]
+            cards = []
+            now = datetime.datetime.now(datetime.timezone.utc)
+            for e in events:
+                # Compute state
+                start_dt = datetime.datetime.combine(e.date, e.start_time or datetime.time.min, tzinfo=datetime.timezone.utc)
+                end_dt = datetime.datetime.combine(e.date, e.end_time or datetime.time.max, tzinfo=datetime.timezone.utc)
+                if start_dt <= now <= end_dt:
+                    state = "current"
+                elif now < start_dt:
+                    state = "future"
+                else:
+                    state = "past"
+                # preview_url: media_type==image, order==0
+                preview_url = None
+                for m in e.media:
+                    if m.media_type == "image" and m.order == 0:
+                        preview_url = m.url
+                        break
+                cards.append({
+                    "id": e.id,
+                    "title": e.title,
+                    "date": e.date,
+                    "state": state,
+                    "preview_url": preview_url,
+                    "is_team": e.is_team,
+                })
+            if not cards:
+                from fastapi import HTTPException
+                raise HTTPException(404, "No events found")
+            return cards
 
+    @classmethod
+    async def get_by_id(cls, event_id: int) -> SEvent | None:
+        async with new_session() as session:
+            res = await session.execute(
+                select(EventOrm).options(selectinload(EventOrm.media)).where(EventOrm.id == event_id)
+            )
+            event = res.scalar_one_or_none()
+            if not event:
+                return None
+            return SEvent.model_validate(event, from_attributes=True)
+        
     @classmethod
     async def add_one(cls, data: SEventAdd) -> int:
         async with new_session() as session:

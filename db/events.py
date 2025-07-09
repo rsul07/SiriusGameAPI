@@ -15,7 +15,7 @@ class EventOrm(Model):
     start_time: Mapped[datetime.time | None] = mapped_column()
     end_time: Mapped[datetime.time | None] = mapped_column()
     is_team: Mapped[bool] = mapped_column(nullable=False)
-    max_members: Mapped[int | None] = mapped_column()
+    max_members: Mapped[int] = mapped_column(nullable=False)
     max_teams: Mapped[int | None] = mapped_column()
 
     media: Mapped[list["EventMediaOrm"]] = relationship(

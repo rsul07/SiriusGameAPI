@@ -25,25 +25,13 @@ class EventExtrasMixin(BaseModel):
     description: str | None = None
     start_time: dt.time | None = None
     end_time: dt.time | None = None
-    max_members: int | None = None
     max_teams: int | None = None
-
-    @model_validator(mode="after")
-    def validate_limits(self):
-        if self.max_members is not None and self.max_teams is not None:
-            raise ValueError("Cannot set both max_members and max_teams")
-        
-        if self.is_team is True and self.max_teams is None:
-            raise ValueError("max_teams required when is_team=True")
-        if self.is_team is False and self.max_members is None:
-            raise ValueError("max_members required when is_team=False")
-        
-        return self
 
 class _EventBase(EventExtrasMixin):
     title: str = Field(..., max_length=120)
     date: dt.date
     is_team: bool
+    max_members: int
 
     @field_validator("title", mode="before")
     def strip_title(cls, v: str) -> str:
@@ -61,6 +49,15 @@ class SEventUpdate(EventExtrasMixin):
 class SEventId(BaseModel):
     ok: bool = True
     event_id: int
+
+# Event card schema for listing
+class SEventCard(BaseModel):
+    id: int
+    title: str
+    date: dt.date
+    state: Literal["future", "current", "past"]
+    preview_url: str | None = None
+    is_team: bool
 
 # Event
 class SEvent(_EventBase):

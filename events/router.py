@@ -1,12 +1,19 @@
 from fastapi import APIRouter, HTTPException
 from events.repository import EventRepository
-from events.schemas import SEventAdd, SEvent, SEventId, SEventUpdate, SEventMediaAdd
+from events.schemas import SEventAdd, SEvent, SEventId, SEventUpdate, SEventMediaAdd, SEventCard
 
 router = APIRouter(prefix="/events", tags=["events"])
 
-@router.get("", response_model=list[SEvent])
+@router.get("", response_model=list[SEventCard])
 async def get_events():
     return await EventRepository.get_all()
+
+@router.get("/{event_id}", response_model=SEvent)
+async def get_event(event_id: int):
+    event = await EventRepository.get_by_id(event_id)
+    if not event:
+        raise HTTPException(404, "Event not found")
+    return event
 
 @router.post("", response_model=SEventId)
 async def add_event(event: SEventAdd):
