@@ -29,12 +29,14 @@ class SMediaReorderItem(BaseModel):
     id: int
     order: int = Field(..., ge=0)  # order must be non-negative
 
+
 # Events
 class EventExtrasMixin(BaseModel):
     description: str | None = None
     start_time: dt.time | None = None
     end_time: dt.time | None = None
     max_teams: int | None = None
+
 
 class _EventBase(EventExtrasMixin):
     title: str = Field(..., max_length=120)
@@ -65,6 +67,7 @@ class SEventUpdate(EventExtrasMixin):
 class SEventId(BaseModel):
     ok: bool = True
     event_id: int
+
 
 # Event card schema for listing
 class SEventCard(BaseModel):

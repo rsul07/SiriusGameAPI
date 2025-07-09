@@ -1,9 +1,9 @@
-def validate_limits(is_team: bool, 
+def validate_limits(is_team: bool,
                     max_members: int | None,
                     max_teams: int | None) -> None:
     if not isinstance(max_members, int) or max_members <= 0:
         raise ValueError("max_members must be a positive integer")
-    
+
     if is_team:
         if max_teams is None:
             raise ValueError("max_teams required when is_team=True")

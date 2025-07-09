@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from repository import EventRepository
-from schemas import SEventAdd, SEvent, SEventId, SEventUpdate, SEventMediaAdd, SEventCard, SMediaReorderItem, SEventActivityAdd
+from schemas import SEventAdd, SEvent, SEventId, SEventUpdate, SEventMediaAdd, SEventCard, SMediaReorderItem, \
+    SEventActivityAdd
 
 router = APIRouter(prefix="/events", tags=["events"])
 
@@ -16,6 +17,7 @@ async def get_event(event_id: int):
     if not event:
         raise HTTPException(404, "Event not found")
     return event
+
 
 @router.post("", response_model=SEventId)
 async def add_event(event: SEventAdd):

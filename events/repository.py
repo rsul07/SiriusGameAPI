@@ -5,8 +5,9 @@ from sqlalchemy.orm import selectinload
 
 from db import new_session
 from db.events import EventOrm, EventMediaOrm, EventActivityOrm
-from .schemas import SEventAdd, SEvent, SEventUpdate, SEventMediaAdd, SEventActivityAdd, SMediaReorderItem
+from schemas import SEventAdd, SEvent, SEventUpdate, SEventMediaAdd, SEventActivityAdd, SMediaReorderItem
 from helpers.validators import validate_limits
+
 
 class EventRepository:
     @classmethod
@@ -127,7 +128,7 @@ class EventRepository:
     async def delete_media(cls, event_id: int, media_id: int) -> bool:
         async with new_session() as session:
             stmt = delete(EventMediaOrm).where(
-                EventMediaOrm.event_id == event_id, 
+                EventMediaOrm.event_id == event_id,
                 EventMediaOrm.id == media_id
             )
             res = await session.execute(stmt)
@@ -145,14 +146,13 @@ class EventRepository:
             await session.commit()
             return bool(res.rowcount)
 
-
     @classmethod
     async def reorder_media(cls, event_id: int, items: list[SMediaReorderItem]) -> bool:
         if not items:
             return False
 
-        ids      = {i.id for i in items}
-        new_map  = {i.id: i.order for i in items}
+        ids = {i.id for i in items}
+        new_map = {i.id: i.order for i in items}
 
         async with new_session() as s:
             rows = await s.execute(

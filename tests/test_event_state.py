@@ -3,6 +3,7 @@ from unittest import TestCase
 
 from events.schemas import SEvent
 
+
 class TestSEventState(TestCase):
     def test_state(self):
         now = datetime.datetime.now(datetime.timezone.utc)
@@ -14,7 +15,7 @@ class TestSEventState(TestCase):
         current_kwargs = {
             "date": now.date(),
             "start_time": datetime.time(0, 0),
-            "end_time":   datetime.time(23, 59),
+            "end_time": datetime.time(23, 59),
         }
 
         past_kwargs = {
@@ -24,7 +25,7 @@ class TestSEventState(TestCase):
         cases = [
             (future_kwargs, "future"),
             (current_kwargs, "current"),
-            (past_kwargs,   "past"),
+            (past_kwargs, "past"),
         ]
 
         for kwargs, expected in cases:

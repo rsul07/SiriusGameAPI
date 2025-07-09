@@ -9,7 +9,8 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from db.events import EventOrm, EventMediaOrm, MediaEnum
-from db import Model   # DeclarativeBase
+from db import Model  # DeclarativeBase
+
 
 @pytest_asyncio.fixture
 async def session():
@@ -20,6 +21,7 @@ async def session():
     async with async_session() as s:
         yield s
     await engine.dispose()
+
 
 @pytest.mark.asyncio
 async def test_media_cascade_delete(session: AsyncSession):
