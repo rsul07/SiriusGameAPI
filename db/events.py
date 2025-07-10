@@ -2,7 +2,7 @@ import datetime
 from enum import Enum
 from typing import List
 
-from sqlalchemy import ForeignKey, Enum as SQLEnum, Index, String, Boolean, Numeric
+from sqlalchemy import ForeignKey, Enum as SQLEnum, Index, String, Boolean, Numeric, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from . import Model
 
@@ -43,7 +43,7 @@ class EventOrm(Model):
     )
 
     activities: Mapped[List["EventActivityOrm"]] = relationship(
-        backref="event",
+        back_populates="event",
         cascade="all, delete-orphan",
     )
 
@@ -77,10 +77,15 @@ class EventActivityOrm(Model):
     event_id: Mapped[int] = mapped_column(ForeignKey("events.id", ondelete="CASCADE"))
 
     name: Mapped[str] = mapped_column(String(100), nullable=False)
-    is_required: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     icon: Mapped[str | None] = mapped_column(String(50))
-    color: Mapped[str | None] = mapped_column(String(50))
 
-    # Используем Numeric для точности координат
     latitude: Mapped[float | None] = mapped_column(Numeric(10, 6))
     longitude: Mapped[float | None] = mapped_column(Numeric(10, 6))
+
+    is_scoreable: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    is_versus: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    max_score: Mapped[int | None] = mapped_column()
+    start_dt: Mapped[datetime.datetime | None] = mapped_column(DateTime(timezone=True))
+    end_dt: Mapped[datetime.datetime | None] = mapped_column(DateTime(timezone=True))
+
+    event: Mapped["EventOrm"] = relationship(back_populates="activities")
