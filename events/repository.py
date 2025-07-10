@@ -101,9 +101,12 @@ class EventRepository:
     @classmethod
     async def delete(cls, event_id: int) -> bool:
         async with new_session() as session:
-            res = await session.execute(delete(EventOrm).where(EventOrm.id == event_id))
+            event = await session.get(EventOrm, event_id)
+            if event is None:
+                return False
+            await session.delete(event)
             await session.commit()
-            return bool(res.rowcount)
+            return True
 
     @classmethod
     async def add_media(cls, event_id: int, data: SEventMediaAdd) -> Optional[int]:
