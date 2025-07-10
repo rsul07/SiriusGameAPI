@@ -4,7 +4,7 @@ from typing import Literal, List
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from db.events import MediaEnum
-from helpers.validators import validate_limits
+from helpers.validators import validate_limits, validate_activity
 
 
 # Media
@@ -43,7 +43,7 @@ class _EventBase(EventExtrasMixin):
     title: str = Field(..., max_length=120)
     date: dt.date
     is_team: bool
-    max_members: int
+    max_members: int = Field(..., gt=0)
 
     @field_validator("title", mode="before")
     def strip_title(cls, v: str) -> str:
@@ -92,19 +92,8 @@ class SActivityBase(BaseModel):
     end_dt: dt.datetime | None = None
 
     @model_validator(mode='after')
-    def validate_conditions(self):
-        # Если активность "на очки", у нее должна быть максимальная оценка
-        if self.is_scoreable and self.max_score is None:
-            raise ValueError("max_score is required when activity is scoreable")
-
-        # Если это просто событие (не на очки), у него должны быть даты начала и конца
-        if not self.is_scoreable and (self.start_dt is None or self.end_dt is None):
-            raise ValueError("start_dt and end_dt are required when activity is not scoreable")
-
-        # Дата начала должна быть раньше даты конца
-        if self.start_dt and self.end_dt and self.start_dt >= self.end_dt:
-            raise ValueError("start_dt must be earlier than end_dt")
-
+    def validate_activity_fields(self):
+        validate_activity(self.is_scoreable, self.max_score, self.start_dt, self.end_dt)
         return self
 
 
