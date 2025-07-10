@@ -4,9 +4,9 @@ from sqlalchemy import func, select, delete, update, exists
 from sqlalchemy.orm import selectinload
 
 from db import new_session
-from db.events import EventOrm, EventMediaOrm, EventActivityOrm
-from .schemas import SEventAdd, SEvent, SEventUpdate, SEventMediaAdd, SActivityAdd, SMediaReorderItem
+from db.events import EventOrm, EventMediaOrm
 from helpers.validators import validate_limits
+from .schemas import SEventAdd, SEvent, SEventUpdate, SEventMediaAdd, SMediaReorderItem
 
 
 class EventRepository:
@@ -106,19 +106,6 @@ class EventRepository:
             res = await session.execute(delete(EventOrm).where(EventOrm.id == event_id))
             await session.commit()
             return bool(res.rowcount)
-
-    @classmethod
-    async def add_activity(cls, event_id: int, data: SActivityAdd) -> Optional[int]:
-        async with new_session() as session:
-            event_exists = await session.scalar(select(exists().where(EventOrm.id == event_id)))
-            if not event_exists:
-                return None
-
-            activity = EventActivityOrm(event_id=event_id, **data.model_dump())
-            session.add(activity)
-            await session.commit()
-            await session.refresh(activity)
-            return activity.id
 
     @classmethod
     async def add_media(cls, event_id: int, data: SEventMediaAdd) -> Optional[int]:

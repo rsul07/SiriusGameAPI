@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException
-from events.schemas import SActivityOut, SActivityAdd, SActivityUpdate
+
+from events.schemas import SActivityOut, SActivityUpdate, SActivityAdd
 from .repository import ActivityRepository
 
 events_router = APIRouter(prefix="/events/{event_id}/activities", tags=["Activities"])

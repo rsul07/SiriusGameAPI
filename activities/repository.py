@@ -1,23 +1,32 @@
-from sqlalchemy import select, update, delete
+from typing import Optional
+
+from sqlalchemy import select, update, delete, exists
+
 from db import new_session
-from db.events import EventActivityOrm
-from events.schemas import SActivityAdd, SActivityUpdate
+from db.events import EventActivityOrm, EventOrm
+from events.schemas import SActivityUpdate, SActivityAdd
 
 
 class ActivityRepository:
+
+    @classmethod
+    async def add_one(cls, event_id: int, data: SActivityAdd) -> Optional[int]:
+        async with new_session() as session:
+            event_exists = await session.scalar(select(exists().where(EventOrm.id == event_id)))
+            if not event_exists:
+                return None
+
+            activity = EventActivityOrm(event_id=event_id, **data.model_dump())
+            session.add(activity)
+            await session.commit()
+            await session.refresh(activity)
+            return activity.id
+
     @classmethod
     async def get_by_event_id(cls, event_id: int) -> list[EventActivityOrm]:
         async with new_session() as s:
             q = select(EventActivityOrm).where(EventActivityOrm.event_id == event_id)
             return (await s.execute(q)).scalars().all()
-
-    @classmethod
-    async def add_one(cls, event_id: int, data: SActivityAdd) -> int:
-        async with new_session() as s:
-            activity = EventActivityOrm(event_id=event_id, **data.model_dump())
-            s.add(activity)
-            await s.commit()
-            return activity.id
 
     @classmethod
     async def edit_one(cls, id: int, data: SActivityUpdate) -> bool:
