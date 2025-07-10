@@ -1,5 +1,4 @@
 from db import engine, Model
-import db.events
 
 
 async def create_tables():

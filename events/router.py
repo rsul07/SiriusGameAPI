@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 
-from .repository import EventRepository
-from .schemas import SEventAdd, SEvent, SEventId, SEventUpdate, SEventMediaAdd, SEventCard, SMediaReorderItem
+from events.repository import EventRepository
+from events.schemas import SEventAdd, SEvent, SEventId, SEventUpdate, SEventMediaAdd, SEventCard, SMediaReorderItem
 
 router = APIRouter(prefix="/events", tags=["events"])
 
