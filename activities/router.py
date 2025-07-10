@@ -16,6 +16,8 @@ async def get_activities_for_event(event_id: int):
 async def add_activity_to_event(event_id: int, data: SActivityAdd):
     try:
         activity_id = await ActivityRepository.add_one(event_id, data)
+        if not activity_id:
+            raise HTTPException(status_code=404, detail="Event not found")
         return {"ok": True, "activity_id": activity_id}
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
