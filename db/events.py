@@ -40,6 +40,7 @@ class EventOrm(Model):
     media: Mapped[list["EventMediaOrm"]] = relationship(
         backref="event",
         cascade="all, delete-orphan",
+        order_by="EventMediaOrm.order",
     )
 
     activities: Mapped[List["EventActivityOrm"]] = relationship(
