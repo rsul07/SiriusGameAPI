@@ -25,6 +25,7 @@ app = FastAPI(
     docs_url=None if ENV == "prod" else "/docs",
     redoc_url=None if ENV == "prod" else "/redoc",
     openapi_url=None if ENV == "prod" else "/openapi.json",
+    root_path="/api"
 )
 
 app.add_middleware(
