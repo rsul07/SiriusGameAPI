@@ -18,7 +18,6 @@ class EventRepository:
             cards = []
 
             for e in events:
-
                 # preview_url: media_type==image, order==0
                 preview_url = None
                 for m in e.media:
@@ -79,7 +78,7 @@ class EventRepository:
 
             # Null out max_teams if is_team is False
             if event.is_team == True and payload.is_team == False:
-                update_data["max_teams"] = None
+                event.max_teams = None
 
             # Validate max_teams
             max_members = payload.max_members if payload.max_members is not None else event.max_members
