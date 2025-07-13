@@ -27,9 +27,13 @@ async def add_event(event: SEventAdd):
 
 @router.patch("/{event_id}", response_model=dict)
 async def edit_event(event_id: int, data: SEventUpdate):
-    updated = await EventRepository.edit(event_id, data)
-    if not updated:
-        raise HTTPException(status_code=404, detail="Event not found")
+    try:
+        updated = await EventRepository.edit(event_id, data)
+        if not updated:
+            raise HTTPException(status_code=404, detail="Event not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
     return {"ok": True}
 
 
