@@ -42,6 +42,13 @@ class SUserOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class SUserUpdate(BaseModel):
+    full_name: str | None = Field(None, min_length=3, max_length=100)
+    avatar_url: str | None = Field(None, max_length=255)
+    height_cm: int | None = Field(None, gt=0, description="Рост в сантиметрах")
+    weight_kg: float | None = Field(None, gt=0, description="Вес в килограммах")
+
+
 class TokenOut(BaseModel):
     access_token: str
     token_type: str = "bearer"

@@ -15,4 +15,4 @@ DB_URL = f"sqlite+aiosqlite:///{db_path}"
 SECRET_KEY = os.getenv("SECRET_KEY",
                        "yRvebEaFw2Oihv6e9MY0MZkhkvd7yhA-cG7PtSIjooFQooo7Oj2FugKYfL_39yXnr7B84Eg1r8l-EWbpkCA8Kw")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 1440
+ACCESS_TOKEN_EXPIRE_MINUTES = 1488

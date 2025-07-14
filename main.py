@@ -8,6 +8,7 @@ from utils.migrate import create_tables
 from events.router import router as events_router
 from activities.router import events_router as event_activities_router, activities_router
 from auth.router import router as auth_router
+from users.router import router as users_router
 
 if ENV == "dev":
     @asynccontextmanager
@@ -37,7 +38,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth_router)
+app.include_router(users_router)
 app.include_router(events_router)
 app.include_router(event_activities_router)
 app.include_router(activities_router)
-app.include_router(auth_router)

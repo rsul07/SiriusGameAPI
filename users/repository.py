@@ -1,13 +1,14 @@
 import random
 import string
+import uuid
 
-from sqlalchemy import select, or_
+from sqlalchemy import select, or_, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from db import new_session
 from db.users import UserOrm
-from users.schemas import SUserRegister
+from users.schemas import SUserRegister, SUserUpdate
 from auth.security import get_password_hash
 from auth.exceptions import UserAlreadyExistsError
 
@@ -63,4 +64,31 @@ class UserRepository:
                 )
             )
             result = await session.execute(query)
+            return result.scalar_one_or_none()
+
+    @classmethod
+    async def get_user_by_id(cls, user_id: uuid.UUID) -> UserOrm | None:
+        """Находит пользователя по его UUID."""
+        async with new_session() as session:
+            query = select(UserOrm).where(UserOrm.id == user_id)
+            result = await session.execute(query)
+            return result.scalar_one_or_none()
+
+    @classmethod
+    async def update_user(cls, user_id: uuid.UUID, data: SUserUpdate) -> UserOrm | None:
+        """Обновляет данные пользователя."""
+        async with new_session() as session:
+            update_data = data.model_dump(exclude_unset=True)
+
+            if not update_data:
+                return await cls.get_user_by_id(user_id)
+
+            stmt = (
+                update(UserOrm)
+                .where(UserOrm.id == user_id)
+                .values(**update_data)
+                .returning(UserOrm)
+            )
+            result = await session.execute(stmt)
+            await session.commit()
             return result.scalar_one_or_none()
