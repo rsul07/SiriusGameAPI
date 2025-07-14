@@ -39,12 +39,12 @@ async def register_user(user_data: SUserRegister):
 async def login_for_access_token(
         form_data: OAuth2PasswordRequestForm = Depends(),
 ):
-    user = await UserRepository.get_user_by_email(form_data.username)
+    user = await UserRepository.get_user_by_login_identifier(form_data.username)
 
     if not user or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Неверный email или пароль",
+            detail="Неверный логин или пароль",
             headers={"WWW-Authenticate": "Bearer"},
         )
 

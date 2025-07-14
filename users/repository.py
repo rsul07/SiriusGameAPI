@@ -1,7 +1,7 @@
 import random
 import string
 
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -51,9 +51,16 @@ class UserRepository:
                 raise UserAlreadyExistsError from e
 
     @classmethod
-    async def get_user_by_email(cls, email: str) -> UserOrm | None:
-        """Находит пользователя по email."""
+    async def get_user_by_login_identifier(cls, login_identifier: str) -> UserOrm | None:
+        """
+        Находит пользователя по email или номеру телефона.
+        """
         async with new_session() as session:
-            query = select(UserOrm).where(UserOrm.email == email)
+            query = select(UserOrm).where(
+                or_(
+                    UserOrm.email == login_identifier,
+                    UserOrm.phone == login_identifier
+                )
+            )
             result = await session.execute(query)
             return result.scalar_one_or_none()
