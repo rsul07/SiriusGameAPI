@@ -17,14 +17,21 @@ def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
 
 
-def create_access_token(data: dict, expires_delta: datetime.timedelta | None = None):
-    """Создает JWT-токен."""
+def create_access_token(data: dict, expires_delta_minutes: int | None = None) -> tuple[str, int]:
+    """
+    Создает JWT-токен и возвращает его вместе со сроком жизни в секундах.
+    """
     to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.datetime.now(datetime.timezone.utc) + expires_delta
-    else:
-        expire = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
 
+    if expires_delta_minutes:
+        expire_delta = datetime.timedelta(minutes=expires_delta_minutes)
+    else:
+        expire_delta = datetime.timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+
+    expire = datetime.datetime.now(datetime.timezone.utc) + expire_delta
     to_encode.update({"exp": expire})
+
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
+    expires_in_seconds = int(expire_delta.total_seconds())
+
+    return encoded_jwt, expires_in_seconds
