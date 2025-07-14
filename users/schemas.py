@@ -38,6 +38,10 @@ class SUserOut(BaseModel):
     phone: str
     gender: GenderEnum
     birthday: datetime.date
+    height_cm: int | None = None
+    weight_kg: float | None = None
+    is_verified: bool
+    is_2fa_enabled: bool
 
     model_config = {"from_attributes": True}
 
