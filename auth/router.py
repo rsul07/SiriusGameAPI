@@ -1,22 +1,14 @@
-from fastapi import APIRouter, HTTPException, Depends, status
-from fastapi.security import OAuth2PasswordRequestForm
-from pydantic import BaseModel
+from fastapi import APIRouter, HTTPException, status
 
-from users.repository import UserRepository
-from users.schemas import SUserRegister, SUserOut
-from auth.security import verify_password, create_access_token
 from auth.exceptions import UserAlreadyExistsError
+from auth.security import verify_password, create_access_token
+from users.repository import UserRepository
+from users.schemas import SUserRegister, SUserOut, TokenOut, SLoginRequest
 
 router = APIRouter(
     prefix="/auth",
     tags=["Auth"],
 )
-
-
-class TokenOut(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
-    expires_in: int
 
 
 @router.post(
@@ -37,11 +29,11 @@ async def register_user(user_data: SUserRegister):
 
 @router.post("/login", response_model=TokenOut)
 async def login_for_access_token(
-        form_data: OAuth2PasswordRequestForm = Depends(),
+        login_data: SLoginRequest
 ):
-    user = await UserRepository.get_user_by_login_identifier(form_data.username)
+    user = await UserRepository.get_user_by_login_identifier(login_data.login_identifier)
 
-    if not user or not verify_password(form_data.password, user.hashed_password):
+    if not user or not verify_password(login_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Неверный логин или пароль",

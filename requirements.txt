@@ -12,3 +12,4 @@ pytest-asyncio~=1.0.0
 pydantic~=2.11.7
 passlib[bcrypt]
 python-multipart
+bcrypt

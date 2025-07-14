@@ -14,6 +14,11 @@ class SUserRegister(BaseModel):
     gender: GenderEnum
 
 
+class SLoginRequest(BaseModel):
+    login_identifier: str = Field(..., description="Email or Phone number")
+    password: str
+
+
 class SUserOut(BaseModel):
     id: uuid.UUID
     handle: str
@@ -25,3 +30,9 @@ class SUserOut(BaseModel):
     birthday: datetime.date
 
     model_config = {"from_attributes": True}
+
+
+class TokenOut(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    expires_in: int
