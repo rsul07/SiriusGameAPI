@@ -3,7 +3,7 @@ import re
 import uuid
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
-from db.users import GenderEnum
+from db.users import GenderEnum, RoleEnum
 
 PHONE_REGEX = r"^\+?[1-9]\d{1,14}$"
 
@@ -42,6 +42,7 @@ class SUserOut(BaseModel):
     weight_kg: float | None = None
     is_verified: bool
     is_2fa_enabled: bool
+    role: RoleEnum
 
     model_config = {"from_attributes": True}
 

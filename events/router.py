@@ -1,7 +1,9 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 
+from db.users import UserOrm
 from events.repository import EventRepository
 from events.schemas import SEventAdd, SEvent, SEventId, SEventUpdate, SEventMediaAdd, SEventCard, SMediaReorderItem
+from auth.roles import require_organizer_or_admin
 
 router = APIRouter(prefix="/events", tags=["events"])
 

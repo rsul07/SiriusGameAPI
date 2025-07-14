@@ -13,6 +13,12 @@ class GenderEnum(str, Enum):
     female = "female"
 
 
+class RoleEnum(str, Enum):
+    user = "user"
+    organizer = "organizer"
+    admin = "admin"
+
+
 class UserOrm(Model):
     __tablename__ = "users"
 
@@ -33,7 +39,6 @@ class UserOrm(Model):
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_2fa_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
-    created_at: Mapped[datetime.datetime] = mapped_column(server_default=func.now(), nullable=False)
+    role: Mapped[RoleEnum] = mapped_column(default=RoleEnum.user, nullable=False)
 
-    # Добавим роли в будущем
-    # role: Mapped[str] = mapped_column(String(20), default="user", nullable=False)
+    created_at: Mapped[datetime.datetime] = mapped_column(server_default=func.now(), nullable=False)
