@@ -23,7 +23,6 @@ def require_organizer_or_admin(current_user: UserOrm = Depends(get_current_user)
     """
     Зависимость, которая разрешает доступ организаторам И администраторам.
     """
-    print("ВЫЗОВ get_current_user. ЗАЩИТА АКТИВНА")
     if current_user.role not in [RoleEnum.organizer, RoleEnum.admin]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
