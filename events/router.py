@@ -22,13 +22,16 @@ async def get_event(event_id: int):
 
 
 @router.post("", response_model=SEventId)
-async def add_event(event: SEventAdd):
+async def add_event(event: SEventAdd,
+                    user: UserOrm = Depends(require_organizer_or_admin)):
     event_id = await EventRepository.add_one(event)
     return {"ok": True, "event_id": event_id}
 
 
 @router.patch("/{event_id}", response_model=dict)
-async def edit_event(event_id: int, data: SEventUpdate):
+async def edit_event(event_id: int,
+                     data: SEventUpdate,
+                     user: UserOrm = Depends(require_organizer_or_admin)):
     try:
         updated = await EventRepository.edit(event_id, data)
         if not updated:
@@ -40,7 +43,8 @@ async def edit_event(event_id: int, data: SEventUpdate):
 
 
 @router.delete("/{event_id}", response_model=dict)
-async def delete_event(event_id: int):
+async def delete_event(event_id: int,
+                       user: UserOrm = Depends(require_organizer_or_admin)):
     deleted = await EventRepository.delete(event_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Event not found")
@@ -48,7 +52,9 @@ async def delete_event(event_id: int):
 
 
 @router.post("/{event_id}/media", response_model=dict)
-async def add_event_media(event_id: int, body: SEventMediaAdd):
+async def add_event_media(event_id: int,
+                          body: SEventMediaAdd,
+                          user: UserOrm = Depends(require_organizer_or_admin)):
     iid = await EventRepository.add_media(event_id, body)
     if iid is None:
         raise HTTPException(404, "Event not found")
@@ -56,7 +62,9 @@ async def add_event_media(event_id: int, body: SEventMediaAdd):
 
 
 @router.delete("/{event_id}/media/{media_id}", response_model=dict)
-async def delete_event_media(event_id: int, media_id: int):
+async def delete_event_media(event_id: int,
+                             media_id: int,
+                             user: UserOrm = Depends(require_organizer_or_admin)):
     deleted = await EventRepository.delete_media(event_id, media_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="media not found")
@@ -64,7 +72,9 @@ async def delete_event_media(event_id: int, media_id: int):
 
 
 @router.patch("/{event_id}/media/reorder", response_model=dict)
-async def reorder_media(event_id: int, body: list[SMediaReorderItem]):
+async def reorder_media(event_id: int,
+                        body: list[SMediaReorderItem],
+                        user: UserOrm = Depends(require_organizer_or_admin)):
     try:
         ok = await EventRepository.reorder_media(event_id, body)
     except ValueError as e:
