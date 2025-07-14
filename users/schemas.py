@@ -1,8 +1,11 @@
 import datetime
+import re
 import uuid
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 from db.users import GenderEnum
+
+PHONE_REGEX = r"^\+?[1-9]\d{1,14}$"
 
 
 class SUserRegister(BaseModel):
@@ -12,6 +15,13 @@ class SUserRegister(BaseModel):
     password: str = Field(..., min_length=6, max_length=50)
     birthday: datetime.date
     gender: GenderEnum
+
+    @field_validator("phone")
+    @classmethod
+    def validate_phone(cls, value: str) -> str:
+        if not re.match(PHONE_REGEX, value):
+            raise ValueError("Некорректный формат номера телефона.")
+        return value
 
 
 class SLoginRequest(BaseModel):
