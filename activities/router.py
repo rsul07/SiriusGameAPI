@@ -1,5 +1,7 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 
+from auth.roles import require_organizer_or_admin
+from db.users import UserOrm
 from events.schemas import SActivityOut, SActivityUpdate, SActivityAdd
 from activities.repository import ActivityRepository
 
@@ -13,7 +15,9 @@ async def get_activities_for_event(event_id: int):
 
 
 @events_router.post("", response_model=dict)
-async def add_activity_to_event(event_id: int, data: SActivityAdd):
+async def add_activity_to_event(event_id: int,
+                                data: SActivityAdd,
+                                user: UserOrm = Depends(require_organizer_or_admin)):
     try:
         activity_id = await ActivityRepository.add_one(event_id, data)
         if not activity_id:
@@ -24,14 +28,17 @@ async def add_activity_to_event(event_id: int, data: SActivityAdd):
 
 
 @activities_router.patch("/{activity_id}", response_model=dict)
-async def edit_activity(activity_id: int, data: SActivityUpdate):
+async def edit_activity(activity_id: int,
+                        data: SActivityUpdate,
+                        user: UserOrm = Depends(require_organizer_or_admin)):
     if not await ActivityRepository.edit_one(activity_id, data):
         raise HTTPException(status_code=404, detail="Activity not found")
     return {"ok": True}
 
 
 @activities_router.delete("/{activity_id}", response_model=dict)
-async def delete_activity(activity_id: int):
+async def delete_activity(activity_id: int,
+                          user: UserOrm = Depends(require_organizer_or_admin)):
     if not await ActivityRepository.delete_one(activity_id):
         raise HTTPException(status_code=404, detail="Activity not found")
     return {"ok": True}
