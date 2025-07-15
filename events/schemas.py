@@ -3,8 +3,9 @@ from typing import Literal, List
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-from db.events import MediaEnum
+from db.events import MediaEnum, ParticipantTypeEnum
 from helpers.validators import validate_limits, validate_activity
+from users.schemas import SUserOut
 
 
 # Media
@@ -124,5 +125,27 @@ class SEvent(_EventBase):
     media: list[SEventMedia]
     state: Literal["future", "current", "past"]
     activities: List[SActivityOut]
+
+    model_config = {"from_attributes": True}
+
+
+class SParticipationCreate(BaseModel):
+    participant_type: ParticipantTypeEnum
+    team_name: str | None = Field(None, min_length=1, max_length=80)
+
+
+class SParticipationMemberOut(BaseModel):
+    user: SUserOut
+
+    model_config = {"from_attributes": True}
+
+
+class SParticipationOut(BaseModel):
+    id: int
+    event_id: int
+    participant_type: ParticipantTypeEnum
+    team_name: str | None
+    creator: SUserOut
+    members: list[SParticipationMemberOut]
 
     model_config = {"from_attributes": True}

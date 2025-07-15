@@ -7,8 +7,12 @@ from utils.migrate import create_tables
 from events.router import router as events_router
 from activities.router import events_router as event_activities_router, activities_router
 from auth.router import router as auth_router
+from config import ENV, MEDIA_DIR
+from events.router import router as events_router
 from users.router import router as users_router
-from utils.seed import create_initial_users
+from participations.router import router as participations_router
+from utils.migrate import create_tables
+from utils.seed import create_initial_users, create_initial_events
 
 
 @asynccontextmanager
@@ -41,3 +45,4 @@ app.include_router(users_router)
 app.include_router(events_router)
 app.include_router(event_activities_router)
 app.include_router(activities_router)
+app.include_router(participations_router)

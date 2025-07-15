@@ -1,8 +1,11 @@
 from fastapi import APIRouter, HTTPException, Depends
+from starlette import status
 
+from auth.dependencies import get_current_user
 from db.users import UserOrm
 from events.repository import EventRepository
-from events.schemas import SEventAdd, SEvent, SEventId, SEventUpdate, SEventMediaAdd, SEventCard, SMediaReorderItem
+from events.schemas import SEventAdd, SEvent, SEventId, SEventUpdate, SEventMediaAdd, SEventCard, SMediaReorderItem, \
+    SParticipationOut, SParticipationCreate
 from auth.roles import require_organizer_or_admin
 
 router = APIRouter(prefix="/events", tags=["Events"])
@@ -82,3 +85,37 @@ async def reorder_media(event_id: int,
     if not ok:
         raise HTTPException(404, "Event not found or empty body")
     return {"ok": True}
+
+
+@router.post(
+    "/{event_id}/participate",
+    response_model=SParticipationOut,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_participation(
+        event_id: int,
+        participation_data: SParticipationCreate,
+        current_user: UserOrm = Depends(get_current_user),
+):
+    """
+    Создает участие в мероприятии (личное или командное).
+    """
+    try:
+        participation = await EventRepository.add_participation(
+            event_id, current_user.id, participation_data
+        )
+        full_participation = await EventRepository.get_participation_by_id(participation.id)
+        return full_participation
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+
+
+@router.get(
+    "/{event_id}/participations",
+    response_model=list[SParticipationOut],
+)
+async def get_event_participations(event_id: int):
+    """
+    Возвращает список всех команд и участников мероприятия.
+    """
+    return await EventRepository.get_participations_for_event(event_id)

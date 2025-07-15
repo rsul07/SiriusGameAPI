@@ -1,12 +1,14 @@
-import os
+import shutil
 from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
-from users.schemas import SUserOut, SUserUpdate, SPasswordUpdate
+
 from auth.dependencies import get_current_user
-from db.users import UserOrm
-from users.repository import UserRepository
 from config import AVATAR_DIR
-import shutil
+from db.users import UserOrm
+from events.repository import EventRepository
+from events.schemas import SParticipationOut
+from users.repository import UserRepository
+from users.schemas import SUserOut, SUserUpdate, SPasswordUpdate
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -15,6 +17,12 @@ router = APIRouter(prefix="/users", tags=["Users"])
 async def read_users_me(current_user: UserOrm = Depends(get_current_user)):
     """Возвращает данные текущего авторизованного пользователя."""
     return current_user
+
+
+@router.get("/me/participations", response_model=list[SParticipationOut])
+async def read_my_participations(current_user: UserOrm = Depends(get_current_user)):
+    """Возвращает список мероприятий, в которых участвует текущий пользователь."""
+    return await EventRepository.get_participations_for_user(current_user.id)
 
 
 @router.patch("/me", response_model=SUserOut)
@@ -47,8 +55,8 @@ async def update_user_password(
 
 @router.post("/me/avatar", response_model=SUserOut)
 async def update_user_avatar(
-    file: UploadFile = File(...),
-    current_user: UserOrm = Depends(get_current_user),
+        file: UploadFile = File(...),
+        current_user: UserOrm = Depends(get_current_user),
 ):
     """Загрузка/замена аватара пользователя."""
 

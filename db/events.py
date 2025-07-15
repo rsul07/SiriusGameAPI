@@ -1,10 +1,12 @@
 import datetime
+import uuid
 from enum import Enum
 from typing import List
 
-from sqlalchemy import ForeignKey, Enum as SQLEnum, Index, String, Boolean, Numeric, DateTime
+from sqlalchemy import ForeignKey, Enum as SQLEnum, Index, String, Boolean, Numeric, DateTime, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from db import Model
+from db.users import UserOrm
 
 
 class EventOrm(Model):
@@ -90,3 +92,39 @@ class EventActivityOrm(Model):
     end_dt: Mapped[datetime.datetime | None] = mapped_column(DateTime(timezone=True))
 
     event: Mapped["EventOrm"] = relationship(back_populates="activities")
+
+
+class ParticipantTypeEnum(str, Enum):
+    individual = "individual"
+    team = "team"
+
+
+class EventParticipationOrm(Model):
+    __tablename__ = "event_participations"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    event_id: Mapped[int] = mapped_column(ForeignKey("events.id", ondelete="CASCADE"))
+    creator_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+
+    participant_type: Mapped[ParticipantTypeEnum] = mapped_column(
+        SQLEnum(ParticipantTypeEnum, name="participant_type_enum"), nullable=False
+    )
+    team_name: Mapped[str | None] = mapped_column(String(80))
+    registered_at: Mapped[datetime.datetime] = mapped_column(server_default=func.now(), nullable=False)
+
+    creator: Mapped["UserOrm"] = relationship(foreign_keys=[creator_id])
+    members: Mapped[list["ParticipationMemberOrm"]] = relationship(back_populates="participation")
+
+
+class ParticipationMemberOrm(Model):
+    __tablename__ = "participation_members"
+
+    participation_id: Mapped[int] = mapped_column(
+        ForeignKey("event_participations.id", ondelete="CASCADE"), primary_key=True
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+
+    user: Mapped["UserOrm"] = relationship()
+    participation: Mapped["EventParticipationOrm"] = relationship(back_populates="members")
