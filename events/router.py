@@ -5,7 +5,7 @@ from events.repository import EventRepository
 from events.schemas import SEventAdd, SEvent, SEventId, SEventUpdate, SEventMediaAdd, SEventCard, SMediaReorderItem
 from auth.roles import require_organizer_or_admin
 
-router = APIRouter(prefix="/events", tags=["events"])
+router = APIRouter(prefix="/events", tags=["Events"])
 
 
 @router.get("", response_model=list[SEventCard])
