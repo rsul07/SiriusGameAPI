@@ -5,10 +5,10 @@ from users.schemas import SUserOut, SUserUpdate, SPasswordUpdate
 from auth.dependencies import get_current_user
 from db.users import UserOrm
 from users.repository import UserRepository
+from config import AVATAR_DIR
 import shutil
 
 router = APIRouter(prefix="/users", tags=["Users"])
-Path("data/media/avatars").mkdir(parents=True, exist_ok=True)
 
 
 @router.get("/me", response_model=SUserOut)
@@ -47,26 +47,33 @@ async def update_user_password(
 
 @router.post("/me/avatar", response_model=SUserOut)
 async def update_user_avatar(
-        file: UploadFile = File(...),
-        current_user: UserOrm = Depends(get_current_user),
+    file: UploadFile = File(...),
+    current_user: UserOrm = Depends(get_current_user),
 ):
-    """Эндпоинт для загрузки аватара."""
+    """Загрузка/замена аватара пользователя."""
 
+    # 1. Удаляем старый файл, если был
     if current_user.avatar_url:
-        old_avatar_path = current_user.avatar_url.lstrip('/')
-        if os.path.exists(old_avatar_path):
-            try:
-                os.remove(old_avatar_path)
-            except OSError as e:
-                print(f"Error deleting old avatar: {e}")
+        old_path = Path(current_user.avatar_url.lstrip("/"))
+        try:
+            if old_path.exists():
+                old_path.unlink()
+        except OSError as e:
+            print(f"Error deleting old avatar: {e}")
 
-    file_extension = Path(file.filename).suffix
-    new_filename = f"{current_user.id}{file_extension}"
-    file_path = f"media/avatars/{new_filename}"
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-    avatar_url = f"/{file_path}"
+    # 2. Сохраняем новый
+    new_name = f"{current_user.id}{Path(file.filename).suffix}"
+    new_path = AVATAR_DIR / new_name
+
+    print("SAVED AVATAR TO:", new_path)
+
+    with new_path.open("wb") as buf:
+        shutil.copyfileobj(file.file, buf)
+
+    # 3. Записываем URL
+    avatar_url = f"/media/avatars/{new_name}"
     updated_user = await UserRepository.update_user(
-        current_user.id, SUserUpdate(avatar_url=avatar_url)
+        current_user.id,
+        SUserUpdate(avatar_url=avatar_url)
     )
     return updated_user

@@ -3,7 +3,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from config import ENV
+from config import AVATAR_DIR, ENV, BASE_DIR, MEDIA_DIR
 from utils.migrate import create_tables
 from events.router import router as events_router
 from activities.router import events_router as event_activities_router, activities_router
@@ -33,8 +33,7 @@ app = FastAPI(
     root_path="/api"
 )
 
-BASE_DIR = Path(__file__).resolve().parent
-app.mount("/media", StaticFiles(directory=BASE_DIR / "data" / "media"), name="media")
+app.mount("/media", StaticFiles(directory=MEDIA_DIR), name="media")
 
 app.add_middleware(
     CORSMiddleware,
