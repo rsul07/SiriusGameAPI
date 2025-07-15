@@ -1,25 +1,31 @@
 import datetime
 from unittest import TestCase
+from db.events import EventOrm
 
-from events.schemas import SEvent
 
-
-class TestSEventState(TestCase):
+class TestEventState(TestCase):
     def test_state(self):
         now = datetime.datetime.now(datetime.timezone.utc)
 
-        future_kwargs = {
-            "date": (now + datetime.timedelta(days=1)).date()
+        base_event_kwargs = {
+            "title": "Test", "is_team": False, "max_members": 10
         }
 
+        # --- Тестовые случаи ---
+        future_kwargs = {
+            "date": (now + datetime.timedelta(days=1)).date(),
+            "start_time": datetime.time(10, 0),
+            "end_time": datetime.time(12, 0),
+        }
         current_kwargs = {
             "date": now.date(),
-            "start_time": datetime.time(0, 0),
-            "end_time": datetime.time(23, 59),
+            "start_time": (now - datetime.timedelta(hours=1)).time(),
+            "end_time": (now + datetime.timedelta(hours=1)).time(),
         }
-
         past_kwargs = {
-            "date": (now - datetime.timedelta(days=1)).date()
+            "date": (now - datetime.timedelta(days=1)).date(),
+            "start_time": None,
+            "end_time": None,
         }
 
         cases = [
@@ -30,13 +36,5 @@ class TestSEventState(TestCase):
 
         for kwargs, expected in cases:
             with self.subTest(expected=expected):
-                ev = SEvent(
-                    id=1,
-                    title="Test",
-                    is_team=False,
-                    max_members=10,
-                    media=[],
-                    **kwargs,
-                )
-                print(kwargs)
-                self.assertEqual(ev.state, expected)
+                orm_event = EventOrm(**base_event_kwargs, **kwargs)
+                self.assertEqual(orm_event.state, expected)
