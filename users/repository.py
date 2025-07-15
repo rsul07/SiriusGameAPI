@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from db import new_session
 from db.users import UserOrm
 from users.schemas import SUserRegister, SUserUpdate
-from auth.security import get_password_hash
+from auth.security import get_password_hash, verify_password
 from auth.exceptions import UserAlreadyExistsError
 
 
@@ -92,3 +92,20 @@ class UserRepository:
             result = await session.execute(stmt)
             await session.commit()
             return result.scalar_one_or_none()
+
+    @classmethod
+    async def update_password(cls, user_id: uuid.UUID, old_password: str, new_password: str) -> bool:
+        """Проверяет старый пароль и обновляет на новый."""
+        async with new_session() as session:
+            user = await session.get(UserOrm, user_id)
+            if not user or not verify_password(old_password, user.hashed_password):
+                return False
+            new_hashed_password = get_password_hash(new_password)
+            stmt = (
+                update(UserOrm)
+                .where(UserOrm.id == user_id)
+                .values(hashed_password=new_hashed_password)
+            )
+            await session.execute(stmt)
+            await session.commit()
+            return True

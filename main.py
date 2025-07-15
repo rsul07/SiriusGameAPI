@@ -1,8 +1,8 @@
 from contextlib import asynccontextmanager
-
+from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
+from fastapi.staticfiles import StaticFiles
 from config import ENV
 from utils.migrate import create_tables
 from events.router import router as events_router
@@ -32,6 +32,9 @@ app = FastAPI(
     openapi_url=None if ENV == "prod" else "/openapi.json",
     root_path="/api"
 )
+
+BASE_DIR = Path(__file__).resolve().parent
+app.mount("/media", StaticFiles(directory=BASE_DIR / "media"), name="media")
 
 app.add_middleware(
     CORSMiddleware,

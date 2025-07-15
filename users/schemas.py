@@ -2,7 +2,6 @@ import datetime
 import re
 import uuid
 from pydantic import BaseModel, EmailStr, Field, field_validator
-
 from db.users import GenderEnum, RoleEnum
 
 PHONE_REGEX = r"^\+?[1-9]\d{1,14}$"
@@ -52,9 +51,16 @@ class SUserUpdate(BaseModel):
     avatar_url: str | None = Field(None, max_length=255)
     height_cm: int | None = Field(None, gt=0, description="Рост в сантиметрах")
     weight_kg: float | None = Field(None, gt=0, description="Вес в килограммах")
+    birthday: datetime.date | None = None
+    gender: GenderEnum | None = None
 
 
 class TokenOut(BaseModel):
     access_token: str
     token_type: str = "bearer"
     expires_in: int
+
+
+class SPasswordUpdate(BaseModel):
+    old_password: str
+    new_password: str = Field(..., min_length=6, max_length=50)
