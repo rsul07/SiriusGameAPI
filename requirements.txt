@@ -13,3 +13,4 @@ pydantic[email]
 python-multipart
 passlib
 bcrypt==4.0.1
+asyncpg
