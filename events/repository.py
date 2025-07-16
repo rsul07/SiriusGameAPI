@@ -5,9 +5,12 @@ from sqlalchemy import func, select, delete, update, exists
 from sqlalchemy.orm import selectinload
 
 from db import new_session
-from db.events import EventOrm, EventMediaOrm, ParticipationMemberOrm, EventParticipationOrm, ParticipantTypeEnum
+from db.events import EventOrm, EventMediaOrm, ParticipationMemberOrm, EventParticipationOrm, ParticipantTypeEnum, \
+    EventJudgeOrm, ScoreOrm
+from db.users import UserOrm, RoleEnum
 from helpers.validators import validate_limits
-from events.schemas import SEventAdd, SEvent, SEventUpdate, SEventMediaAdd, SMediaReorderItem, SParticipationCreate
+from events.schemas import SEventAdd, SEvent, SEventUpdate, SEventMediaAdd, SMediaReorderItem, SParticipationCreate, \
+    SScoreAdd, SJudgeAdd
 
 
 class EventRepository:
@@ -377,7 +380,8 @@ class EventRepository:
             new_captain_member = next((m for m in participation.members if m.user_id != captain_id), None)
             if not new_captain_member:
                 # Если по какой-то причине некого назначить, распускаем команду
-                stmt_delete_participation = delete(EventParticipationOrm).where(EventParticipationOrm.id == participation_id)
+                stmt_delete_participation = delete(EventParticipationOrm).where(
+                    EventParticipationOrm.id == participation_id)
                 await session.execute(stmt_delete_participation)
                 await session.commit()
                 return
@@ -391,4 +395,52 @@ class EventRepository:
             await session.execute(stmt_update)
 
             # 4. Коммитим обе операции (DELETE и UPDATE)
+            await session.commit()
+
+    @classmethod
+    async def add_judge_to_event(cls, event_id: int, data: SJudgeAdd):
+        async with new_session() as session:
+            # Проверяем, не является ли пользователь уже участником этого мероприятия
+            participation = await session.execute(
+                select(ParticipationMemberOrm).join(EventParticipationOrm).where(
+                    ParticipationMemberOrm.user_id == data.user_id,
+                    EventParticipationOrm.event_id == event_id
+                )
+            )
+            if participation.scalar_one_or_none():
+                raise ValueError("Этот пользователь уже является участником и не может быть назначен судьей.")
+
+            new_judge = EventJudgeOrm(event_id=event_id, **data.model_dump())
+            session.add(new_judge)
+            await session.commit()
+
+    @classmethod
+    async def add_score(cls, user_id: uuid.UUID, data: SScoreAdd):
+        async with new_session() as session:
+            # Получаем ивент, чтобы проверить права
+            participation = await session.get(EventParticipationOrm, data.participation_id)
+            if not participation:
+                raise ValueError("Участие не найдено.")
+
+            event = await session.get(EventOrm, participation.event_id)
+            user_role = (await session.get(UserOrm, user_id)).role
+
+            # Проверка прав: Админ или Организатор могут добавлять очки без привязки к активности
+            if data.activity_id is None:
+                if user_role not in [RoleEnum.admin, RoleEnum.organizer]:
+                    raise PermissionError("Только администратор или организатор могут добавлять бонусные очки.")
+
+            # Если activity_id указан, проверяем, является ли пользователь судьей
+            else:
+                is_judge = await session.get(EventJudgeOrm, (event.id, user_id))
+                if not is_judge and user_role not in [RoleEnum.admin, RoleEnum.organizer]:
+                    raise PermissionError("Только назначенный судья может выставлять оценки за активности.")
+
+                # Тут можно добавить проверку на max_score, если нужно
+
+            new_score = ScoreOrm(
+                judge_id=user_id if data.activity_id is not None else None,
+                **data.model_dump()
+            )
+            session.add(new_score)
             await session.commit()

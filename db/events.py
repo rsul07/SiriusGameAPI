@@ -131,3 +131,23 @@ class ParticipationMemberOrm(Model):
 
     user: Mapped["UserOrm"] = relationship()
     participation: Mapped["EventParticipationOrm"] = relationship(back_populates="members")
+
+
+class EventJudgeOrm(Model):
+    __tablename__ = "event_judges"
+
+    event_id: Mapped[int] = mapped_column(ForeignKey("events.id", ondelete="CASCADE"), primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    role_description: Mapped[str | None] = mapped_column(String(255))
+
+
+class ScoreOrm(Model):
+    __tablename__ = "scores"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    participation_id: Mapped[int] = mapped_column(ForeignKey("event_participations.id", ondelete="CASCADE"))
+    activity_id: Mapped[int | None] = mapped_column(ForeignKey("event_activities.id", ondelete="CASCADE"))
+    judge_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+
+    score: Mapped[int] = mapped_column(nullable=False)
+    reason: Mapped[str | None] = mapped_column(String(255))

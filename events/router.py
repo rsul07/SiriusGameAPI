@@ -2,10 +2,10 @@ from fastapi import APIRouter, HTTPException, Depends
 from starlette import status
 
 from auth.dependencies import get_current_user
-from db.users import UserOrm
+from db.users import UserOrm, RoleEnum
 from events.repository import EventRepository
 from events.schemas import SEventAdd, SEvent, SEventId, SEventUpdate, SEventMediaAdd, SEventCard, SMediaReorderItem, \
-    SParticipationOut, SParticipationCreate
+    SParticipationOut, SParticipationCreate, SJudgeAdd
 from auth.roles import require_organizer_or_admin
 
 router = APIRouter(prefix="/events", tags=["Events"])
@@ -119,3 +119,19 @@ async def get_event_participations(event_id: int):
     Возвращает список всех команд и участников мероприятия.
     """
     return await EventRepository.get_participations_for_event(event_id)
+
+
+@router.post("/{event_id}/judges", status_code=status.HTTP_201_CREATED)
+async def add_judge(
+        event_id: int,
+        judge_data: SJudgeAdd,
+        current_user: UserOrm = Depends(get_current_user)
+):
+    if current_user.role not in [RoleEnum.admin, RoleEnum.organizer]:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Нет прав для назначения судей.")
+
+    try:
+        await EventRepository.add_judge_to_event(event_id, judge_data)
+        return {"ok": True}
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))

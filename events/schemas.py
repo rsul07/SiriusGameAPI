@@ -1,4 +1,5 @@
 import datetime as dt
+import uuid
 from typing import Literal, List
 
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -149,3 +150,15 @@ class SParticipationOut(BaseModel):
     members: list[SParticipationMemberOut]
 
     model_config = {"from_attributes": True}
+
+
+class SJudgeAdd(BaseModel):
+    user_id: uuid.UUID
+    role_description: str | None = None
+
+
+class SScoreAdd(BaseModel):
+    participation_id: int
+    score: int
+    activity_id: int | None = None
+    reason: str | None = None
