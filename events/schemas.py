@@ -145,7 +145,7 @@ class SParticipationOut(BaseModel):
     event_id: int
     participant_type: ParticipantTypeEnum
     team_name: str | None
-    creator: SUserOut
+    creator: SUserPublic
     members: list[SParticipationMemberOut]
 
     model_config = {"from_attributes": True}

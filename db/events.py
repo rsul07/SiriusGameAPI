@@ -113,7 +113,10 @@ class EventParticipationOrm(Model):
     registered_at: Mapped[datetime.datetime] = mapped_column(server_default=func.now(), nullable=False)
 
     creator: Mapped["UserOrm"] = relationship(foreign_keys=[creator_id])
-    members: Mapped[list["ParticipationMemberOrm"]] = relationship(back_populates="participation")
+    members: Mapped[list["ParticipationMemberOrm"]] = relationship(
+        back_populates="participation",
+        cascade="all, delete-orphan"
+    )
 
 
 class ParticipationMemberOrm(Model):
