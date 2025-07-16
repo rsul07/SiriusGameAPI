@@ -181,7 +181,8 @@ class EventRepository:
             current_participations = await cls.get_participations_for_event(event_id)
 
             if data.participant_type == ParticipantTypeEnum.individual:
-                current_individual_members = sum(1 for p in current_participations if p.participant_type == 'individual')
+                current_individual_members = sum(
+                    1 for p in current_participations if p.participant_type == 'individual')
                 if current_individual_members >= event.max_members:
                     raise ValueError("Достигнут лимит участников в личном зачете.")
 
@@ -276,30 +277,36 @@ class EventRepository:
     @classmethod
     async def remove_member_from_participation(cls, participation_id: int, user_id_to_remove: uuid.UUID,
                                                current_user_id: uuid.UUID):
-        """Удаляет участника из команды."""
+        """Удаляет участника из команды или обрабатывает выход капитана."""
         async with new_session() as session:
             participation = await cls.get_participation_by_id(participation_id)
             if not participation:
                 raise ValueError("Команда не найдена.")
 
             is_self_kick = user_id_to_remove == current_user_id
-            is_captain = participation.creator_id == current_user_id
+            is_captain_action = participation.creator_id == current_user_id
 
-            # --- Логика прав ---
-            if not is_self_kick and not is_captain:
-                raise PermissionError("Только капитан может удалять других участников.")
+            # Если капитан выходит из команды сам
+            if is_self_kick and is_captain_action:
+                return await cls.captain_leaves_team(participation_id, current_user_id)
 
-            # Важное правило: капитан не может покинуть команду, он может ее только распустить
-            if is_self_kick and is_captain:
-                raise ValueError("Капитан не может покинуть команду. Он может только удалить ее.")
+            # Если капитан кикает другого
+            if is_captain_action and not is_self_kick:
+                member_to_delete = await session.get(ParticipationMemberOrm, (participation_id, user_id_to_remove))
+                if not member_to_delete: raise ValueError("Участник не найден в этой команде.")
+                await session.delete(member_to_delete)
+                await session.commit()
+                return
 
-            # Находим и удаляем участника
-            member_to_delete = await session.get(ParticipationMemberOrm, (participation_id, user_id_to_remove))
-            if not member_to_delete:
-                raise ValueError("Участник не найден в этой команде.")
+            # Если обычный участник выходит сам
+            if is_self_kick and not is_captain_action:
+                member_to_delete = await session.get(ParticipationMemberOrm, (participation_id, user_id_to_remove))
+                if not member_to_delete: raise ValueError("Участник не найден в этой команде.")
+                await session.delete(member_to_delete)
+                await session.commit()
+                return
 
-            await session.delete(member_to_delete)
-            await session.commit()
+            raise PermissionError("У вас нет прав для выполнения этого действия.")
 
     @classmethod
     async def delete_participation(cls, participation_id: int, current_user_id: uuid.UUID):
@@ -327,3 +334,61 @@ class EventRepository:
             )
             result = await session.execute(query)
             return result.scalars().all()
+
+    @classmethod
+    async def transfer_captaincy(cls, participation_id: int, new_captain_id: uuid.UUID, current_captain_id: uuid.UUID):
+        """Передает права капитана новому участнику."""
+        async with new_session() as session:
+            participation = await session.get(EventParticipationOrm, participation_id)
+            if not participation or participation.creator_id != current_captain_id:
+                raise PermissionError("Только текущий капитан может передать права.")
+
+            # Проверяем, что новый капитан является членом команды
+            new_captain_member = await session.get(ParticipationMemberOrm, (participation_id, new_captain_id))
+            if not new_captain_member:
+                raise ValueError("Новый капитан должен быть участником команды.")
+
+            participation.creator_id = new_captain_id
+            await session.commit()
+
+    @classmethod
+    async def captain_leaves_team(cls, participation_id: int, captain_id: uuid.UUID):
+        """Обрабатывает выход капитана из команды."""
+        async with new_session() as session:
+            participation = await cls.get_participation_by_id(participation_id)
+            if not participation or participation.creator_id != captain_id:
+                raise PermissionError("Ошибка прав доступа.")
+
+            if len(participation.members) == 1:
+                await session.delete(participation)
+                await session.commit()
+                return
+
+            # --- НОВАЯ, ЕЩЕ БОЛЕЕ НАДЕЖНАЯ ЛОГИКА ---
+
+            # 1. Удаляем капитана из таблицы members
+            stmt_delete = delete(ParticipationMemberOrm).where(
+                ParticipationMemberOrm.participation_id == participation_id,
+                ParticipationMemberOrm.user_id == captain_id
+            )
+            await session.execute(stmt_delete)
+
+            # 2. Находим ID нового капитана (первый из оставшихся)
+            new_captain_member = next((m for m in participation.members if m.user_id != captain_id), None)
+            if not new_captain_member:
+                # Если по какой-то причине некого назначить, распускаем команду
+                stmt_delete_participation = delete(EventParticipationOrm).where(EventParticipationOrm.id == participation_id)
+                await session.execute(stmt_delete_participation)
+                await session.commit()
+                return
+
+            # 3. Обновляем creator_id в таблице participations
+            new_captain_id = new_captain_member.user_id
+            stmt_update = update(EventParticipationOrm).where(
+                EventParticipationOrm.id == participation_id
+            ).values(creator_id=new_captain_id)
+
+            await session.execute(stmt_update)
+
+            # 4. Коммитим обе операции (DELETE и UPDATE)
+            await session.commit()

@@ -45,3 +45,18 @@ async def leave_or_kick_member(
         )
     except (ValueError, PermissionError) as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.patch("/{participation_id}/transfer-captaincy/{new_captain_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def transfer_captaincy(
+        participation_id: int,
+        new_captain_id: uuid.UUID,
+        current_user: UserOrm = Depends(get_current_user),
+):
+    """Передать права капитана другому участнику."""
+    try:
+        await EventRepository.transfer_captaincy(
+            participation_id, new_captain_id, current_user.id
+        )
+    except (ValueError, PermissionError) as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

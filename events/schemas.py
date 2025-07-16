@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 from db.events import MediaEnum, ParticipantTypeEnum
 from helpers.validators import validate_limits, validate_activity
-from users.schemas import SUserOut, SUserPublic
+from users.schemas import SUserPublic
 
 
 # Media
