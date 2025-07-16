@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 from db.events import MediaEnum, ParticipantTypeEnum
 from helpers.validators import validate_limits, validate_activity
-from users.schemas import SUserOut
+from users.schemas import SUserOut, SUserPublic
 
 
 # Media
@@ -135,7 +135,7 @@ class SParticipationCreate(BaseModel):
 
 
 class SParticipationMemberOut(BaseModel):
-    user: SUserOut
+    user: SUserPublic
 
     model_config = {"from_attributes": True}
 

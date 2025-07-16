@@ -174,6 +174,24 @@ class EventRepository:
             if existing_participation.scalar_one_or_none():
                 raise ValueError("Пользователь уже участвует в этом мероприятии.")
 
+            event = await session.get(EventOrm, event_id)
+            if not event:
+                raise ValueError("Мероприятие не найдено.")
+
+            current_participations = await cls.get_participations_for_event(event_id)
+
+            if data.participant_type == ParticipantTypeEnum.individual:
+                current_individual_members = sum(1 for p in current_participations if p.participant_type == 'individual')
+                if current_individual_members >= event.max_members:
+                    raise ValueError("Достигнут лимит участников в личном зачете.")
+
+            if data.participant_type == ParticipantTypeEnum.team:
+                if not event.is_team or not event.max_teams:
+                    raise ValueError("Это мероприятие не является командным.")
+                current_teams_count = sum(1 for p in current_participations if p.participant_type == 'team')
+                if current_teams_count >= event.max_teams:
+                    raise ValueError("Достигнут лимит команд в мероприятии.")
+
             new_participation = EventParticipationOrm(
                 event_id=event_id,
                 creator_id=user_id,
@@ -189,7 +207,9 @@ class EventRepository:
             )
             session.add(creator_as_member)
             await session.commit()
-            return new_participation
+
+            full_participation = await cls.get_participation_by_id(new_participation.id)
+            return full_participation
 
     @classmethod
     async def get_participations_for_event(cls, event_id: int) -> list[EventParticipationOrm]:

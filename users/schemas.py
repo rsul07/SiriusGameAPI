@@ -64,3 +64,16 @@ class TokenOut(BaseModel):
 class SPasswordUpdate(BaseModel):
     old_password: str
     new_password: str = Field(..., min_length=6, max_length=50)
+
+
+class SUserPublic(BaseModel):
+    """
+    Схема для публичного отображения данных пользователя.
+    Не содержит email, телефон и другую личную информацию.
+    """
+    id: uuid.UUID
+    handle: str
+    full_name: str
+    avatar_url: str | None = None
+
+    model_config = {"from_attributes": True}
