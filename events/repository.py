@@ -6,7 +6,7 @@ from sqlalchemy.orm import selectinload
 
 from db import new_session
 from db.events import EventOrm, EventMediaOrm, ParticipationMemberOrm, EventParticipationOrm, ParticipantTypeEnum, \
-    EventJudgeOrm, ScoreOrm
+    EventJudgeOrm, ScoreOrm, EventActivityOrm
 from db.users import UserOrm, RoleEnum
 from helpers.validators import validate_limits
 from events.schemas import SEventAdd, SEvent, SEventUpdate, SEventMediaAdd, SMediaReorderItem, SParticipationCreate, \
@@ -174,6 +174,10 @@ class EventRepository:
                     EventParticipationOrm.event_id == event_id
                 )
             )
+            is_judge = await session.get(EventJudgeOrm, (event_id, user_id))
+            if is_judge:
+                raise ValueError("Судья не может участвовать в мероприятии.")
+
             if existing_participation.scalar_one_or_none():
                 raise ValueError("Пользователь уже участвует в этом мероприятии.")
 
@@ -250,6 +254,12 @@ class EventRepository:
         async with new_session() as session:
             # Получаем участие и связанных с ним членов
             participation = await cls.get_participation_by_id(participation_id)
+            event = await session.get(EventOrm, participation.event_id)
+
+            is_judge = await session.get(EventJudgeOrm, (event.id, user_id))
+            if is_judge:
+                raise ValueError("Судья не может участвовать в мероприятии.")
+
             if not participation:
                 raise ValueError("Команда или участие не найдены.")
 
@@ -258,7 +268,6 @@ class EventRepository:
                 raise ValueError("Нельзя присоединиться к индивидуальному участию.")
 
             # Проверяем, есть ли места в команде
-            event = await session.get(EventOrm, participation.event_id)
             if len(participation.members) >= event.max_members:
                 raise ValueError("Команда уже заполнена.")
 
@@ -400,6 +409,10 @@ class EventRepository:
     @classmethod
     async def add_judge_to_event(cls, event_id: int, data: SJudgeAdd):
         async with new_session() as session:
+            user_to_be_judge = await session.get(UserOrm, data.user_id)
+            if not user_to_be_judge:
+                raise ValueError("Пользователь не найден.")
+
             # Проверяем, не является ли пользователь уже участником этого мероприятия
             participation = await session.execute(
                 select(ParticipationMemberOrm).join(EventParticipationOrm).where(
@@ -417,29 +430,38 @@ class EventRepository:
     @classmethod
     async def add_score(cls, user_id: uuid.UUID, data: SScoreAdd):
         async with new_session() as session:
-            # Получаем ивент, чтобы проверить права
             participation = await session.get(EventParticipationOrm, data.participation_id)
             if not participation:
-                raise ValueError("Участие не найдено.")
+                raise ValueError("Команда/участие не найдено.")
 
             event = await session.get(EventOrm, participation.event_id)
-            user_role = (await session.get(UserOrm, user_id)).role
+            user = await session.get(UserOrm, user_id)
 
-            # Проверка прав: Админ или Организатор могут добавлять очки без привязки к активности
+            is_admin_or_org = user.role in [RoleEnum.admin, RoleEnum.organizer]
+            is_judge_for_event = await session.get(EventJudgeOrm, (event.id, user_id))
+
+            # --- Логика для бонусных очков (без активности) ---
             if data.activity_id is None:
-                if user_role not in [RoleEnum.admin, RoleEnum.organizer]:
+                if not is_admin_or_org:
                     raise PermissionError("Только администратор или организатор могут добавлять бонусные очки.")
 
-            # Если activity_id указан, проверяем, является ли пользователь судьей
+            # --- Логика для очков за активность ---
             else:
-                is_judge = await session.get(EventJudgeOrm, (event.id, user_id))
-                if not is_judge and user_role not in [RoleEnum.admin, RoleEnum.organizer]:
-                    raise PermissionError("Только назначенный судья может выставлять оценки за активности.")
+                if not is_judge_for_event and not is_admin_or_org:
+                    raise PermissionError("Только назначенный судья или организатор могут выставлять оценки за активности.")
 
-                # Тут можно добавить проверку на max_score, если нужно
+                activity = await session.get(EventActivityOrm, data.activity_id)
+                if not activity:
+                    raise ValueError("Активность не найдена.")
+
+                if not activity.is_scoreable:
+                    raise ValueError("Нельзя выставить оценку за не оцениваемую активность.")
+
+                if activity.max_score is not None and data.score > activity.max_score:
+                    raise ValueError(f"Оценка не может быть больше максимальной ({activity.max_score}).")
 
             new_score = ScoreOrm(
-                judge_id=user_id if data.activity_id is not None else None,
+                judge_id=user_id if data.activity_id is not None and is_judge_for_event else None,
                 **data.model_dump()
             )
             session.add(new_score)
