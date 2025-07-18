@@ -1,5 +1,4 @@
 import datetime as dt
-import uuid
 from typing import Literal, List
 
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -126,6 +125,7 @@ class SEvent(_EventBase):
     media: list[SEventMedia]
     state: Literal["future", "current", "past"]
     activities: List[SActivityOut]
+    is_current_user_judge: bool = False
 
     model_config = {"from_attributes": True}
 
@@ -153,7 +153,7 @@ class SParticipationOut(BaseModel):
 
 
 class SJudgeAdd(BaseModel):
-    user_id: uuid.UUID
+    handle: str
     role_description: str | None = None
 
 
@@ -162,3 +162,16 @@ class SScoreAdd(BaseModel):
     score: int
     activity_id: int | None = None
     reason: str | None = None
+
+
+class SJudgeOut(BaseModel):
+    user: SUserPublic
+    role_description: str | None
+
+    model_config = {"from_attributes": True}
+
+
+class SLeaderboardEntry(BaseModel):
+    participation_id: int
+    team_name: str | None
+    total_score: int

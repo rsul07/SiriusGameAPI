@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from starlette import status
 
-from auth.dependencies import get_current_user
+from auth.dependencies import get_current_user, get_optional_current_user
 from db.users import UserOrm, RoleEnum
 from events.repository import EventRepository
 from events.schemas import SEventAdd, SEvent, SEventId, SEventUpdate, SEventMediaAdd, SEventCard, SMediaReorderItem, \
@@ -17,11 +17,23 @@ async def get_events():
 
 
 @router.get("/{event_id}", response_model=SEvent)
-async def get_event(event_id: int):
-    event = await EventRepository.get_by_id(event_id)
-    if not event:
+async def get_event(
+        event_id: int,
+        current_user: UserOrm | None = Depends(get_optional_current_user)
+):
+    event_orm = await EventRepository.get_by_id(event_id)
+    if not event_orm:
         raise HTTPException(status_code=404, detail="Event not found")
-    return event
+
+    # Преобразуем ORM в Pydantic-схему
+    event_data = SEvent.model_validate(event_orm, from_attributes=True)
+
+    # Если пользователь авторизован, проверяем, является ли он судьей
+    if current_user:
+        is_judge = await EventRepository.is_user_judge_for_event(event_id, current_user.id)
+        event_data.is_current_user_judge = is_judge
+
+    return event_data
 
 
 @router.post("", response_model=SEventId)

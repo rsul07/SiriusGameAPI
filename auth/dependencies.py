@@ -5,9 +5,12 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jwt import ExpiredSignatureError, InvalidTokenError
 
 from config import SECRET_KEY, ALGORITHM
+from db.users import UserOrm
 from users.repository import UserRepository
 
 bearer_scheme = HTTPBearer()
+bearer_scheme_optional = HTTPBearer(auto_error=False)
+
 
 async def get_current_user(
         credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)
@@ -42,4 +45,24 @@ async def get_current_user(
     if not user:
         raise credentials_exc
 
+    return user
+
+
+async def get_optional_current_user(
+        credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme_optional)  # Используем новую схему
+) -> UserOrm | None:
+    if not credentials:
+        return None
+    try:
+        # Это почти полная копия get_current_user, но она не выбрасывает ошибку, а возвращает None
+        token = credentials.credentials
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id_str: str = payload.get("sub")
+        if user_id_str is None:
+            return None
+        user_id = uuid.UUID(user_id_str)
+    except (jwt.PyJWTError, ValueError, AttributeError):
+        return None
+
+    user = await UserRepository.get_user_by_id(user_id)
     return user

@@ -109,3 +109,11 @@ class UserRepository:
             await session.execute(stmt)
             await session.commit()
             return True
+
+    @classmethod
+    async def get_user_by_handle(cls, handle: str) -> UserOrm | None:
+        """Находит пользователя по его handle."""
+        async with new_session() as session:
+            query = select(UserOrm).where(UserOrm.handle == handle)
+            result = await session.execute(query)
+            return result.scalar_one_or_none()

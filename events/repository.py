@@ -11,6 +11,7 @@ from db.users import UserOrm, RoleEnum
 from helpers.validators import validate_limits
 from events.schemas import SEventAdd, SEvent, SEventUpdate, SEventMediaAdd, SMediaReorderItem, SParticipationCreate, \
     SScoreAdd, SJudgeAdd
+from users.repository import UserRepository
 
 
 class EventRepository:
@@ -409,21 +410,26 @@ class EventRepository:
     @classmethod
     async def add_judge_to_event(cls, event_id: int, data: SJudgeAdd):
         async with new_session() as session:
-            user_to_be_judge = await session.get(UserOrm, data.user_id)
+            user_to_be_judge = await UserRepository.get_user_by_handle(data.handle)
             if not user_to_be_judge:
                 raise ValueError("Пользователь не найден.")
 
             # Проверяем, не является ли пользователь уже участником этого мероприятия
             participation = await session.execute(
                 select(ParticipationMemberOrm).join(EventParticipationOrm).where(
-                    ParticipationMemberOrm.user_id == data.user_id,
+                    ParticipationMemberOrm.user_id == user_to_be_judge.id,  # Используем найденный ID
                     EventParticipationOrm.event_id == event_id
                 )
             )
             if participation.scalar_one_or_none():
                 raise ValueError("Этот пользователь уже является участником и не может быть назначен судьей.")
 
-            new_judge = EventJudgeOrm(event_id=event_id, **data.model_dump())
+            # Создаем запись с найденным ID
+            new_judge = EventJudgeOrm(
+                event_id=event_id,
+                user_id=user_to_be_judge.id,
+                role_description=data.role_description
+            )
             session.add(new_judge)
             await session.commit()
 
@@ -448,7 +454,8 @@ class EventRepository:
             # --- Логика для очков за активность ---
             else:
                 if not is_judge_for_event and not is_admin_or_org:
-                    raise PermissionError("Только назначенный судья или организатор могут выставлять оценки за активности.")
+                    raise PermissionError(
+                        "Только назначенный судья или организатор могут выставлять оценки за активности.")
 
                 activity = await session.get(EventActivityOrm, data.activity_id)
                 if not activity:
@@ -466,3 +473,10 @@ class EventRepository:
             )
             session.add(new_score)
             await session.commit()
+
+    @classmethod
+    async def is_user_judge_for_event(cls, event_id: int, user_id: uuid.UUID) -> bool:
+        """Проверяет, является ли пользователь судьей на мероприятии."""
+        async with new_session() as session:
+            judge_entry = await session.get(EventJudgeOrm, (event_id, user_id))
+            return judge_entry is not None
