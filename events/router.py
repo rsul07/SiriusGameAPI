@@ -5,7 +5,7 @@ from auth.dependencies import get_current_user, get_optional_current_user
 from db.users import UserOrm, RoleEnum
 from events.repository import EventRepository
 from events.schemas import SEventAdd, SEvent, SEventId, SEventUpdate, SEventMediaAdd, SEventCard, SMediaReorderItem, \
-    SParticipationOut, SParticipationCreate, SJudgeAdd
+    SParticipationOut, SParticipationCreate, SJudgeAdd, SJudgeOut
 from auth.roles import require_organizer_or_admin
 
 router = APIRouter(prefix="/events", tags=["Events"])
@@ -131,6 +131,15 @@ async def get_event_participations(event_id: int):
     Возвращает список всех команд и участников мероприятия.
     """
     return await EventRepository.get_participations_for_event(event_id)
+
+
+@router.get(
+    "/{event_id}/judges",
+    response_model=list[SJudgeOut],
+)
+async def get_judges(event_id: int):
+    """Возвращает список судей для мероприятия."""
+    return await EventRepository.get_judges_for_event(event_id)
 
 
 @router.post("/{event_id}/judges", status_code=status.HTTP_201_CREATED)

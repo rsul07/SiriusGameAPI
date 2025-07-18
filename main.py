@@ -8,6 +8,7 @@ from activities.router import events_router as event_activities_router, activiti
 from auth.router import router as auth_router
 from users.router import router as users_router
 from participations.router import router as participations_router
+from scores.router import router as scores_router
 
 from config import ENV, MEDIA_DIR
 from utils.migrate import create_tables
@@ -45,3 +46,4 @@ app.include_router(events_router)
 app.include_router(event_activities_router)
 app.include_router(activities_router)
 app.include_router(participations_router)
+app.include_router(scores_router)

@@ -480,3 +480,15 @@ class EventRepository:
         async with new_session() as session:
             judge_entry = await session.get(EventJudgeOrm, (event_id, user_id))
             return judge_entry is not None
+
+    @classmethod
+    async def get_judges_for_event(cls, event_id: int) -> list[EventJudgeOrm]:
+        """Возвращает список судей для мероприятия."""
+        async with new_session() as session:
+            query = (
+                select(EventJudgeOrm)
+                .where(EventJudgeOrm.event_id == event_id)
+                .options(selectinload(EventJudgeOrm.user))
+            )
+            result = await session.execute(query)
+            return result.scalars().all()

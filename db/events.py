@@ -140,6 +140,8 @@ class EventJudgeOrm(Model):
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
     role_description: Mapped[str | None] = mapped_column(String(255))
 
+    user: Mapped["UserOrm"] = relationship()
+
 
 class ScoreOrm(Model):
     __tablename__ = "scores"
