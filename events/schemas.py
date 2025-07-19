@@ -146,6 +146,7 @@ class SParticipationOut(BaseModel):
     event_id: int
     participant_type: ParticipantTypeEnum
     team_name: str | None
+    team_avatar_url: str | None
     creator: SUserPublic
     members: list[SParticipationMemberOut]
 
@@ -172,6 +173,5 @@ class SJudgeOut(BaseModel):
 
 
 class SLeaderboardEntry(BaseModel):
-    participation_id: int
-    team_name: str | None
+    participation: SParticipationOut
     total_score: int

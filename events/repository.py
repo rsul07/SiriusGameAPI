@@ -492,3 +492,29 @@ class EventRepository:
             )
             result = await session.execute(query)
             return result.scalars().all()
+
+    @classmethod
+    async def get_leaderboard(cls, event_id: int):
+        """
+        Возвращает отсортированный лидерборд для мероприятия.
+        Включает команды с 0 очков.
+        """
+        async with new_session() as session:
+            query = (
+                select(
+                    EventParticipationOrm,
+                    func.coalesce(func.sum(ScoreOrm.score), 0).label("total_score")
+                )
+                .outerjoin(ScoreOrm, EventParticipationOrm.id == ScoreOrm.participation_id)
+                .where(EventParticipationOrm.event_id == event_id)
+                .group_by(EventParticipationOrm.id)
+                .order_by(func.sum(ScoreOrm.score).desc().nulls_last())
+                .options(
+                    selectinload(EventParticipationOrm.creator).load_only(UserOrm.id, UserOrm.handle, UserOrm.full_name,
+                                                                          UserOrm.avatar_url),
+                    selectinload(EventParticipationOrm.members).selectinload(ParticipationMemberOrm.user).load_only(
+                        UserOrm.id, UserOrm.handle, UserOrm.full_name, UserOrm.avatar_url)
+                )
+            )
+            result = await session.execute(query)
+            return result.all()

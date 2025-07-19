@@ -5,7 +5,7 @@ from auth.dependencies import get_current_user, get_optional_current_user
 from db.users import UserOrm, RoleEnum
 from events.repository import EventRepository
 from events.schemas import SEventAdd, SEvent, SEventId, SEventUpdate, SEventMediaAdd, SEventCard, SMediaReorderItem, \
-    SParticipationOut, SParticipationCreate, SJudgeAdd, SJudgeOut
+    SParticipationOut, SParticipationCreate, SJudgeAdd, SJudgeOut, SLeaderboardEntry
 from auth.roles import require_organizer_or_admin
 
 router = APIRouter(prefix="/events", tags=["Events"])
@@ -156,3 +156,20 @@ async def add_judge(
         return {"ok": True}
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+
+
+@router.get(
+    "/{event_id}/leaderboard",
+    response_model=list[SLeaderboardEntry],
+)
+async def get_leaderboard(event_id: int):
+    """
+    Возвращает посчитанный и отсортированный лидерборд для мероприятия.
+    """
+    raw_leaderboard = await EventRepository.get_leaderboard(event_id)
+
+    response = [
+        SLeaderboardEntry(participation=participation_orm, total_score=score)
+        for participation_orm, score in raw_leaderboard
+    ]
+    return response

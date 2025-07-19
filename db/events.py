@@ -110,6 +110,7 @@ class EventParticipationOrm(Model):
         SQLEnum(ParticipantTypeEnum, name="participant_type_enum"), nullable=False
     )
     team_name: Mapped[str | None] = mapped_column(String(80))
+    team_avatar_url: Mapped[str | None] = mapped_column(String(255))
     registered_at: Mapped[datetime.datetime] = mapped_column(server_default=func.now(), nullable=False)
 
     creator: Mapped["UserOrm"] = relationship(foreign_keys=[creator_id])
