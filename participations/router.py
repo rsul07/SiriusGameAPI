@@ -1,10 +1,16 @@
+import os
+import shutil
 import uuid
+from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 
 from auth.dependencies import get_current_user
+from db import new_session
+from db.events import EventParticipationOrm
 from db.users import UserOrm
 from events.repository import EventRepository
+from events.schemas import SParticipationOut
 
 router = APIRouter(prefix="/participations", tags=["Participations"])
 
@@ -61,3 +67,45 @@ async def transfer_captaincy(
         )
     except (ValueError, PermissionError) as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.post("/{participation_id}/avatar", response_model=SParticipationOut)
+async def update_team_avatar(
+        participation_id: int,
+        file: UploadFile = File(...),
+        current_user: UserOrm = Depends(get_current_user),
+):
+    """
+    Загружает аватар для команды. Доступно только капитану.
+    """
+    async with new_session() as session:
+        # 1. Получаем участие и проверяем права
+        participation = await session.get(EventParticipationOrm, participation_id)
+        if not participation:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Команда не найдена.")
+        if participation.creator_id != current_user.id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                                detail="Только капитан может менять аватар команды.")
+
+        # 2. Удаляем старый аватар, если он есть
+        if participation.team_avatar_url:
+            old_avatar_path = participation.team_avatar_url.lstrip('/')
+            if os.path.exists(old_avatar_path):
+                os.remove(old_avatar_path)
+
+        # 3. Сохраняем новый файл
+        file_extension = Path(file.filename).suffix
+        new_filename = f"{participation_id}{file_extension}"
+        file_path = f"media/avatars/team_{new_filename}"
+
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+
+        # 4. Обновляем путь в БД
+        participation.team_avatar_url = f"/{file_path}"
+        await session.commit()
+        await session.refresh(participation)
+
+        # Подгружаем связанные данные для корректного ответа
+        full_participation = await EventRepository.get_participation_by_id(participation_id)
+        return full_participation
