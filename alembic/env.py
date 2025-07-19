@@ -15,6 +15,7 @@ from db.events import (
     EventOrm, EventActivityOrm, EventMediaOrm, EventParticipationOrm,
     ParticipationMemberOrm, EventJudgeOrm, ScoreOrm
 )
+from config import DB_URL
 
 config = context.config
 
@@ -22,6 +23,8 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 target_metadata = Model.metadata
+
+config.set_main_option('sqlalchemy.url', DB_URL.replace('+asyncpg', ''))
 
 
 def run_migrations_offline() -> None:
