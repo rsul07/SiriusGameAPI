@@ -1,11 +1,15 @@
 import os
 from pathlib import Path
 
-ENV = os.getenv("ENV", "dev") # dev режим для локального запуска. на сервере всегда используется prod
+from dotenv import load_dotenv
+
+load_dotenv()
+ENV = os.getenv("ENV", "dev")  # dev режим для локального запуска. на сервере всегда используется prod
 SERVER_IP = "62.183.4.195"
+SERVER_PASSWORD = os.getenv("SERVER_PASSWORD", "")
 
 POSTGRES_USER = os.getenv("POSTGRES_USER", "postgres")
-POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
+POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", SERVER_PASSWORD)
 POSTGRES_HOST = os.getenv("POSTGRES_HOST", SERVER_IP)
 POSTGRES_PORT = os.getenv("POSTGRES_PORT", "5432")
 POSTGRES_DB = os.getenv("POSTGRES_DB", "dev_db")
@@ -14,7 +18,6 @@ if POSTGRES_PASSWORD is None:
     raise ValueError("POSTGRES_PASSWORD не определен")
 
 DB_URL = f"postgresql+asyncpg://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
-
 
 BASE_DIR = Path(__file__).resolve().parent
 
