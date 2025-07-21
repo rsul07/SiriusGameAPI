@@ -4,7 +4,7 @@ import random
 from sqlalchemy import select
 from db import new_session
 from db.events import EventActivityOrm, EventOrm, EventParticipationOrm, ParticipantTypeEnum, ParticipationMemberOrm, \
-    ScoreOrm
+    ScoreOrm, EventJudgeOrm, EventMediaOrm, MediaEnum
 from db.users import UserOrm, RoleEnum
 from auth.security import get_password_hash
 
@@ -217,3 +217,159 @@ async def create_leaderboard_data():
 
         await session.commit()
     print("Создание данных для лидерборда завершено.")
+
+
+async def create_demo_events():
+    """Создает 6 детализированных мероприятий для демонстрации."""
+    print("Проверка и создание демо-мероприятий...")
+    async with new_session() as session:
+        res_check = await session.execute(select(EventOrm).where(EventOrm.title == "Sirius Summer Volleyball Cup"))
+        if res_check.scalar_one_or_none():
+            print("Демо-мероприятия уже существуют.")
+            return
+
+        print("Создание демо-мероприятий, команд и очков...")
+        today = datetime.date(2025, 7, 22)
+        res_users = await session.execute(select(UserOrm))
+        users = res_users.scalars().all()
+        admin, organizer = users[0], users[1]
+        players = users[2:]
+
+        # --- ДЕТАЛИЗИРОВАННЫЕ ДАННЫЕ ДЛЯ МЕРОПРИЯТИЙ ---
+        DEMO_EVENTS_DATA = [
+            # --- ТЕКУЩИЕ ---
+            {
+                "data": {
+                    "title": "Турнир по баскетболу 3x3", "date": today, "is_team": True, "max_teams": 8, "max_members": 40,
+                    "start_time": datetime.time(9, 0), "end_time": datetime.time(18, 0),
+                    "description": "Приготовьтесь к жаркому асфальту! Ежегодный турнир по стритболу среди лучших команд Сириуса. Динамичные матчи, музыка и отличная атмосфера гарантированы. Покажите свое мастерство владения мячом и командную игру!"
+                },
+                "media": [{"url": "https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=2070", "name": "Баскетбольная площадка", "media_type": MediaEnum.image}],
+                "activities": [
+                    {"name": "Церемония открытия", "is_scoreable": False, "icon": "🎉", "latitude": 43.4070, "longitude": 39.9590, "start_dt": datetime.datetime(2025, 7, 21, 9, 0), "end_dt": datetime.datetime(2025, 7, 21, 9, 30)},
+                    {"name": "Групповой этап", "is_scoreable": True, "max_score": 100, "icon": "🏀", "latitude": 43.4075, "longitude": 39.9594},
+                    {"name": "Плей-офф", "is_scoreable": True, "max_score": 200, "icon": "🏆", "latitude": 43.4080, "longitude": 39.9598},
+                ],
+                "judges": [organizer],
+                "participations": [
+                    {"team_name": "Комета", "captain": players[0], "members": [players[1]], "avatar": "https://api.dicebear.com/8.x/shapes/svg?seed=comet"},
+                    {"team_name": "Вымпел", "captain": players[2], "members": [players[3]], "avatar": "https://api.dicebear.com/8.x/shapes/svg?seed=vimpel"},
+                    {"team_name": "Звезда", "captain": players[4], "members": [players[5]], "avatar": "https://api.dicebear.com/8.x/shapes/svg?seed=star"},
+                    {"team_name": "Кристалл", "captain": players[6], "members": [players[7]], "avatar": "https://api.dicebear.com/8.x/shapes/svg?seed=crystal"},
+                ]
+            },
+            {
+                "data": {
+                    "title": "Открытый турнир по шахматам", "date": today, "is_team": False, "max_members": 10,
+                    "start_time": datetime.time(10, 0), "end_time": datetime.time(16, 0),
+                    "description": "Интеллектуальная битва для стратегов и тактиков. В этом турнире важны не только знание дебютов, но и выдержка, концентрация и умение мыслить на несколько ходов вперед. Приглашаются все желающие, независимо от рейтинга."
+                },
+                "media": [{"url": "https://images.unsplash.com/photo-1529699211952-734e80c4d42b?q=80&w=2071", "name": "Шахматная партия", "media_type": MediaEnum.image}],
+                "activities": [
+                    {"name": "Регистрация участников", "is_scoreable": False, "icon": "📝", "latitude": 43.4090, "longitude": 39.9600, "start_dt": datetime.datetime(2025, 7, 21, 10, 0), "end_dt": datetime.datetime(2025, 7, 21, 11, 0)},
+                    {"name": "Блиц-турнир", "is_scoreable": True, "max_score": 50, "icon": "⚡️", "latitude": 43.4095, "longitude": 39.9605},
+                    {"name": "Классическая партия", "is_scoreable": True, "max_score": 100, "icon": "♟️", "latitude": 43.4095, "longitude": 39.9605},
+                ],
+                "judges": [admin],
+                "participations": [{"player": p} for p in players[10:18]]
+            },
+            # --- БУДУЩИЕ ---
+            {
+                "data": {
+                    "title": "Большой теннисный турнир", "date": today + datetime.timedelta(days=14), "is_team": True, "max_teams": 10, "max_members": 40,
+                    "description": "Турнир для любителей и профессионалов большого тенниса. Соревнования пройдут на открытых кортах с профессиональным покрытием. Приглашаем команды для участия в парном разряде. Отличная возможность проверить свои силы перед осенним сезоном."
+                },
+                "media": [{"url": "https://static.ernur.kz/article/5e2e6914850e9.jpg", "name": "Теннисный корт", "media_type": MediaEnum.image}],
+                "activities": [
+                    {"name": "Регистрация и жеребьевка", "is_scoreable": False, "start_dt": datetime.datetime(2025, 8, 4, 9, 0), "end_dt": datetime.datetime(2025, 8, 4, 10, 0)},
+                    {"name": "Парный разряд", "is_scoreable": False, "start_dt": datetime.datetime(2025, 8, 4, 10, 0), "end_dt": datetime.datetime(2025, 8, 4, 14, 0)},
+                    {"name": "Одиночный разряд", "is_scoreable": False, "start_dt": datetime.datetime(2025, 8, 4, 14, 0), "end_dt": datetime.datetime(2025, 8, 4, 18, 0)}
+                ],
+                "participations": [
+                    {"team_name": "Подача навылет", "captain": players[8], "members": [players[9]], "avatar": "https://api.dicebear.com/8.x/shapes/svg?seed=ace"},
+                ]
+            },
+            {
+                "data": {
+                    "title": "Летний легкоатлетический забег", "date": today + datetime.timedelta(days=30), "is_team": False, "max_members": 200,
+                    "description": "Традиционный ежегодный забег по Олимпийскому парку. Дистанция 5 километров доступна для всех уровней подготовки. Приходите с семьей и друзьями, чтобы насладиться спортивным праздником и живописными видами."
+                },
+                "media": [{"url": "https://avatars.mds.yandex.net/i?id=2757793f7648f3b10529faf07980cec5_l-5258779-images-thumbs&n=13", "name": "Бегуны на старте", "media_type": MediaEnum.image}],
+                "activities": [
+                    {"name": "Выдача стартовых пакетов", "is_scoreable": False, "start_dt": datetime.datetime(2025, 8, 20, 8, 0), "end_dt": datetime.datetime(2025, 8, 20, 9, 30)},
+                    {"name": "Старт забега на 5 км", "is_scoreable": False, "start_dt": datetime.datetime(2025, 8, 20, 10, 0), "end_dt": datetime.datetime(2025, 8, 20, 11, 30)},
+                    {"name": "Награждение победителей", "is_scoreable": False, "start_dt": datetime.datetime(2025, 8, 20, 12, 0), "end_dt": datetime.datetime(2025, 8, 20, 12, 30)}
+                ],
+                "participations": []
+            },
+            # --- ПРОШЕДШИЕ ---
+            {
+                "data": {
+                    "title": "Sirius Summer Volleyball Cup", "date": today - datetime.timedelta(days=20), "is_team": True, "max_teams": 6, "max_members": 30,
+                    "description": "Ежегодный кубок по пляжному волейболу. Солнце, песок и напряженные матчи. Команды соревновались за звание чемпионов летнего сезона 2025 года."
+                },
+                "media": [{"url": "https://avatars.mds.yandex.net/i?id=779be1c7ea939864f4641ed917c827c7_l-10385090-images-thumbs&n=13", "name": "Пляжный волейбол", "media_type": MediaEnum.image}],
+                "activities": [{"name": "Первый сет", "is_scoreable": True, "max_score": 25}, {"name": "Второй сет", "is_scoreable": True, "max_score": 25}],
+                "participations": [
+                    {"team_name": "SunStrikers", "captain": players[10], "members": [players[11]], "avatar": "https://api.dicebear.com/8.x/shapes/svg?seed=sun"},
+                    {"team_name": "Net Ninjas", "captain": players[12], "members": [players[13]], "avatar": "https://api.dicebear.com/8.x/shapes/svg?seed=ninja"},
+                ]
+            },
+            {
+                "data": {
+                    "title": "Состязания по настольному теннису", "date": today - datetime.timedelta(days=45), "is_team": False, "max_members": 15,
+                    "description": "Открытые личные состязания по настольному теннису. Турнир проходил по олимпийской системе на выбывание. Участники продемонстрировали высокий уровень мастерства и волю к победе."
+                },
+                "media": [{"url": "https://avatars.mds.yandex.net/i?id=87dd7fd9ff85ec9d9b95b2743780a8d6_l-9069268-images-thumbs&n=13", "name": "Игра в пинг-понг", "media_type": MediaEnum.image}],
+                "activities": [{"name": "Круговой этап", "is_scoreable": True, "max_score": 100}, {"name": "Финал", "is_scoreable": True, "max_score": 150}],
+                "participations": [{"player": p} for p in players[0:8]]
+            },
+        ]
+
+        # --- ИСПРАВЛЕННЫЙ ЦИКЛ СОЗДАНИЯ ---
+        for event_info in DEMO_EVENTS_DATA:
+            event_data = event_info["data"]
+            print(f"Создание демо-мероприятия: {event_data['title']}")
+
+            new_event = EventOrm(**event_data)
+            # Теперь данные для активностей полные, is_scoreable больше не хардкодим
+            new_event.activities = [EventActivityOrm(**act) for act in event_info.get("activities", [])]
+            new_event.media = [EventMediaOrm(**med) for med in event_info.get("media", [])]
+            new_event.judges = [EventJudgeOrm(user_id=j.id) for j in event_info.get("judges", [])]
+            session.add(new_event)
+            await session.flush()
+
+            # Создаем участия и начисляем очки
+            for part_data in event_info.get("participations", []):
+                if "team_name" in part_data:  # Командное участие
+                    p = EventParticipationOrm(
+                        event_id=new_event.id, creator_id=part_data["captain"].id,
+                        participant_type=ParticipantTypeEnum.team, team_name=part_data["team_name"],
+                        team_avatar_url=part_data.get("avatar")
+                    )
+                    p.members.append(ParticipationMemberOrm(user_id=part_data["captain"].id))
+                    for member in part_data["members"]:
+                        p.members.append(ParticipationMemberOrm(user_id=member.id))
+                else:  # Личное участие
+                    player = part_data["player"]
+                    p = EventParticipationOrm(
+                        event_id=new_event.id, creator_id=player.id,
+                        participant_type=ParticipantTypeEnum.individual
+                    )
+                    p.members.append(ParticipationMemberOrm(user_id=player.id))
+
+                session.add(p)
+                await session.flush()
+
+                # Начисляем очки для текущих и прошедших
+                if new_event.date <= today:
+                    # Перебираем только ОЦЕНИВАЕМЫЕ активности
+                    for activity in [act for act in new_event.activities if act.is_scoreable]:
+                        score = ScoreOrm(
+                            participation_id=p.id, activity_id=activity.id,
+                            score=random.randint(int(activity.max_score * 0.4), activity.max_score)
+                        )
+                        session.add(score)
+
+        await session.commit()
+    print("Создание демо-данных завершено.")

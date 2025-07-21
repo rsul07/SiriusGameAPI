@@ -12,7 +12,7 @@ from scores.router import router as scores_router
 
 from config import ENV, MEDIA_DIR
 from utils.migrate import create_tables
-from utils.seed import create_initial_users, create_initial_events, create_leaderboard_data
+from utils.seed import create_initial_users, create_initial_events, create_leaderboard_data, create_demo_events
 
 
 @asynccontextmanager
@@ -20,8 +20,7 @@ async def lifespan(app: FastAPI):
     await create_tables()
     if ENV == "dev":
         await create_initial_users()
-        await create_initial_events()
-        await create_leaderboard_data()
+        await create_demo_events()
     yield
 
 
