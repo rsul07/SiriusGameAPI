@@ -71,10 +71,6 @@ INITIAL_EVENTS = [
         "activities": [
             {"name": "Регистрация и получение мерча", "icon": "👕", "start_dt": datetime.datetime(2025, 8, 15, 12, 0),
              "end_dt": datetime.datetime(2025, 8, 15, 13, 0)},
-            {"name": "Начало контеста", "icon": "💻", "start_dt": datetime.datetime(2025, 8, 15, 13, 0),
-             "end_dt": datetime.datetime(2025, 8, 16, 13, 0)},
-            {"name": "Награждение победителей", "icon": "🏆", "start_dt": datetime.datetime(2025, 8, 16, 14, 0),
-             "end_dt": datetime.datetime(2025, 8, 16, 15, 0)},
         ]
     },
     {

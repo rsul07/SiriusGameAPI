@@ -35,5 +35,5 @@ def validate_activity(is_scoreable: bool,
     if start_dt and end_dt and start_dt >= end_dt:
         raise ValueError("Время начала должно быть раньше времени окончания.")
 
-    if start_dt.date() != end_dt.date():
+    if start_dt and end_dt and start_dt.date() != end_dt.date():
         raise ValueError("Начало и окончание активности должны быть в один и тот же день.")
