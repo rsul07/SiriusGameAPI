@@ -1,3 +1,4 @@
+from hmac import new
 import os
 import shutil
 import uuid
@@ -11,6 +12,8 @@ from db.events import EventParticipationOrm
 from db.users import UserOrm
 from events.repository import EventRepository
 from events.schemas import SParticipationOut
+
+from config import AVATAR_DIR
 
 router = APIRouter(prefix="/participations", tags=["Participations"])
 
@@ -89,20 +92,20 @@ async def update_team_avatar(
 
         # 2. Удаляем старый аватар, если он есть
         if participation.team_avatar_url:
-            old_avatar_path = participation.team_avatar_url.lstrip('/')
-            if os.path.exists(old_avatar_path):
-                os.remove(old_avatar_path)
+            old_avatar_path = Path(participation.team_avatar_url.lstrip("/"))
+            if old_avatar_path.exists():
+                old_avatar_path.unlink()
 
         # 3. Сохраняем новый файл
         file_extension = Path(file.filename).suffix
         new_filename = f"{participation_id}{file_extension}"
-        file_path = f"media/avatars/team_{new_filename}"
+        file_path = AVATAR_DIR / new_filename
 
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
 
         # 4. Обновляем путь в БД
-        participation.team_avatar_url = f"/{file_path}"
+        participation.team_avatar_url = f"/media/avatars/{new_filename}"
         await session.commit()
         await session.refresh(participation)
 
