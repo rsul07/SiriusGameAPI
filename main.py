@@ -18,9 +18,10 @@ from utils.seed import create_initial_users, create_initial_events, create_leade
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await create_tables()
-    await create_initial_users()
-    await create_initial_events()
-    await create_leaderboard_data()
+    if ENV == "dev":
+        await create_initial_users()
+        await create_initial_events()
+        await create_leaderboard_data()
     yield
 
 
